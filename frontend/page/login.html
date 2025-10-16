@@ -1,0 +1,179 @@
+<!-- pages/login.html -->
+<section class="login-section min-vh-100 bg-gradient-primary py-5">
+  <div class="container">
+    <div class="row justify-content-center align-items-center">
+      <div class="col-md-8 col-lg-6 col-xl-5">
+        <!-- Carte de connexion -->
+        <div class="card login-card border-0 shadow-lg">
+          <div class="card-body p-4 p-md-5">
+            <!-- En-tête -->
+            <div class="text-center mb-4">
+              <div class="login-icon bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+                <i class="bi bi-shield-lock fs-3" aria-hidden="true"></i>
+              </div>
+              <h1 class="h3 fw-bold text-dark mb-2">Connexion</h1>
+              <p class="text-muted">Accédez à votre espace administrateur</p>
+            </div>
+
+            <!-- Messages d'état -->
+            <div id="login-success" class="alert alert-success alert-dismissible fade show d-none" role="alert" aria-live="polite">
+              <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+              <span id="login-success-message"></span>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+            </div>
+
+            <div id="login-error" class="alert alert-danger alert-dismissible fade show d-none" role="alert" aria-live="assertive">
+              <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+              <span id="login-error-message"></span>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+            </div>
+
+            <!-- Formulaire de connexion -->
+            <form id="loginForm" novalidate>
+              <!-- Email -->
+              <div class="mb-4">
+                <label for="email" class="form-label fw-semibold">
+                  <i class="bi bi-envelope me-2" aria-hidden="true"></i>Adresse email
+                  <span class="text-danger">*</span>
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  class="form-control form-control-lg"
+                  required
+                  autocomplete="email"
+                  placeholder="votre@email.com"
+                  maxlength="100"
+                  inputmode="email"
+                />
+                <div id="email-error" class="invalid-feedback"></div>
+              </div>
+
+              <!-- Mot de passe -->
+              <div class="mb-4">
+                <label for="password" class="form-label fw-semibold">
+                  <i class="bi bi-key me-2" aria-hidden="true"></i>Mot de passe
+                  <span class="text-danger">*</span>
+                </label>
+                <div class="input-group input-group-lg">
+                  <input
+                    type="password"
+                    id="password"
+                    class="form-control"
+                    required
+                    autocomplete="current-password"
+                    placeholder="Votre mot de passe"
+                    minlength="8"
+                    maxlength="50"
+                  />
+                  <button
+                    id="toggle-password"
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    aria-label="Afficher le mot de passe"
+                    aria-controls="password"
+                    aria-pressed="false"
+                  >
+                    <i class="bi bi-eye" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <div id="password-error" class="invalid-feedback"></div>
+              </div>
+
+              <!-- Options -->
+              <div class="mb-4">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="rememberMe" />
+                  <label class="form-check-label small" for="rememberMe">
+                    Se souvenir de moi
+                  </label>
+                </div>
+              </div>
+
+              <!-- Bouton de connexion -->
+              <button
+                id="login-submit"
+                type="submit"
+                class="btn btn-primary btn-lg w-100 py-2 fw-semibold"
+              >
+                <span class="submit-text">
+                  <i class="bi bi-box-arrow-in-right me-2" aria-hidden="true"></i>Se connecter
+                </span>
+                <div class="spinner-border spinner-border-sm d-none ms-2" role="status" aria-hidden="true">
+                  <span class="visually-hidden">Connexion en cours...</span>
+                </div>
+              </button>
+
+              <!-- Compte de démo -->
+              <div class="text-center mt-3">
+                <button type="button" id="guest-demo" class="btn btn-outline-info btn-sm">
+                  <i class="bi bi-person me-1" aria-hidden="true"></i>Accéder en mode démo
+                </button>
+              </div>
+            </form>
+
+            <!-- Liens supplémentaires -->
+            <div class="login-links text-center mt-4 pt-3 border-top">
+              <div class="small">
+                <a href="#forgot-password" class="text-decoration-none" id="forgot-password">
+                  <i class="bi bi-question-circle me-1" aria-hidden="true"></i>Mot de passe oublié ?
+                </a>
+              </div>
+
+              <div class="small mt-2">
+                <span class="text-muted">Nouveau sur le portfolio ?</span>
+                <a href="#register" class="text-decoration-none ms-1" data-page="register">
+                  Créer un compte
+                </a>
+              </div>
+            </div>
+
+            <!-- Informations de sécurité -->
+            <div class="security-info mt-4 p-3 bg-light rounded small">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-shield-check text-success me-2" aria-hidden="true"></i>
+                <span class="text-muted">Connexion sécurisée avec authentification JWT</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Retour à l'accueil -->
+        <div class="text-center mt-4">
+          <a href="#home" class="btn btn-outline-light btn-sm" data-page="home">
+            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Retour à l'accueil
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Modal de réinitialisation de mot de passe -->
+<div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Mot de passe oublié</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-3">
+          Entrez votre adresse email pour recevoir les instructions de réinitialisation.
+        </p>
+        <div class="mb-3">
+          <input type="email" id="reset-email" class="form-control" placeholder="votre@email.com" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-primary btn-sm" id="send-reset-link">
+          Envoyer le lien
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Script esterno (niente inline, compatibile con CSP di Helmet) -->
+<script type="module" src="/js/login.js" defer></script>

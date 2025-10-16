@@ -1,0 +1,48 @@
+<section class="container py-5">
+  <header class="mb-4">
+    <h1 class="mb-1" data-i18n="register.title">Registrazione</h1>
+    <p class="text-muted mb-0" data-i18n="register.subtitle">Crea un nuovo account.</p>
+  </header>
+
+  <div id="register-success" class="alert alert-success d-none" role="alert" aria-live="polite"></div>
+  <div id="register-error" class="alert alert-danger d-none" role="alert" aria-live="assertive"></div>
+
+  <form id="registerForm" class="needs-validation" novalidate>
+    <div class="mb-3">
+      <label for="name" class="form-label" data-i18n="register.name.label">Nome</label>
+      <input type="text" id="name" class="form-control" required autocomplete="name"
+            placeholder="Il tuo nome" data-i18n-placeholder="register.name.placeholder" minlength="2" maxlength="50">
+      <div class="invalid-feedback" data-i18n="register.name.error">Inserisci il nome (min 2 caratteri).</div>
+    </div>
+
+    <div class="mb-3">
+      <label for="email" class="form-label" data-i18n="register.email.label">Email</label>
+      <input type="email" id="email" class="form-control" required autocomplete="email"
+            placeholder="nome@esempio.com" data-i18n-placeholder="register.email.placeholder" maxlength="100">
+      <div class="invalid-feedback" data-i18n="register.email.error">Inserisci un'email valida.</div>
+    </div>
+
+    <div class="mb-3">
+      <label for="password" class="form-label" data-i18n="register.password.label">Password</label>
+      <div class="input-group">
+        <input type="password" id="password" class="form-control" required autocomplete="new-password"
+              placeholder="Minimo 8 caratteri" data-i18n-placeholder="register.password.placeholder" minlength="8">
+        <button id="toggle-password" type="button" class="btn btn-outline-secondary" data-i18n="register.password.toggle">Mostra</button>
+        <div class="invalid-feedback" data-i18n="register.password.error">Password non valida (min 8 caratteri).</div>
+      </div>
+      <small class="text-muted" data-i18n="register.password.hint">Minimo 8 caratteri.</small>
+    </div>
+
+    <div class="mb-3">
+      <label for="password2" class="form-label" data-i18n="register.password2.label">Conferma Password</label>
+      <input type="password" id="password2" class="form-control" required autocomplete="new-password"
+            placeholder="Ripeti la password" data-i18n-placeholder="register.password2.placeholder" minlength="8">
+      <div class="invalid-feedback" data-i18n="register.password2.error">Le password non coincidono.</div>
+    </div>
+
+    <button id="register-submit" type="submit" class="btn btn-primary">
+      <span class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
+      <span data-i18n="register.submit">Registrati</span>
+    </button>
+  </form>
+</section>

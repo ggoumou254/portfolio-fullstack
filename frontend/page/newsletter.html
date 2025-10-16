@@ -1,0 +1,85 @@
+<section class="newsletter-section py-5 bg-light">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 col-xl-6">
+        <div class="newsletter-card card border-0 shadow-lg">
+          <div class="card-body p-4 p-md-5">
+            <div class="text-center mb-4">
+              <div class="newsletter-icon bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width:80px;height:80px;">
+                <i class="bi bi-envelope-paper fs-2"></i>
+              </div>
+              <h1 class="h2 fw-bold text-dark mb-2" data-i18n="newsletter.title">Resta aggiornato</h1>
+              <p class="lead text-muted mb-3" data-i18n="newsletter.subtitle">Novità su progetti, articoli tecnici e consigli di sviluppo.</p>
+            </div>
+
+            <!-- Alert opzionali (non usate dal JS, ma utili lato CMS se vuoi) -->
+            <div id="newsletter-success" class="alert alert-success d-none" role="alert"></div>
+            <div id="newsletter-error" class="alert alert-danger d-none" role="alert"></div>
+
+            <form id="newsletterForm" novalidate>
+              <!-- honeypot (deve rimanere vuoto) -->
+              <input type="text" name="website" autocomplete="off" tabindex="-1"
+                     style="position:absolute;left:-9999px;opacity:0;" aria-hidden="true">
+
+              <!-- timing guard -->
+              <input type="hidden" name="startedAt" value="">
+
+              <div class="mb-4">
+                <label for="subEmail" class="form-label fw-semibold" data-i18n="newsletter.email.label">
+                  La tua email <span class="text-danger">*</span>
+                </label>
+                <input type="email" id="subEmail" name="email" class="form-control form-control-lg" required
+                       autocomplete="email" placeholder="nome@esempio.com" maxlength="100"
+                       data-i18n-placeholder="newsletter.email.placeholder">
+                <div id="subEmail-error" class="invalid-feedback" data-i18n="newsletter.email.error">
+                  Inserisci un'email valida.
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label for="newsletter-frequency" class="form-label fw-semibold" data-i18n="newsletter.frequency.label">Frequenza</label>
+                <select id="newsletter-frequency" name="frequency" class="form-select">
+                  <option value="weekly" data-i18n="newsletter.frequency.weekly">Settimanale</option>
+                  <option value="biweekly" selected data-i18n="newsletter.frequency.biweekly">Bisettimanale</option>
+                  <option value="monthly" data-i18n="newsletter.frequency.monthly">Mensile</option>
+                </select>
+              </div>
+
+              <div class="mb-4 form-check">
+                <input class="form-check-input" type="checkbox" id="privacy-consent" name="privacyConsent" required>
+                <label class="form-check-label small" for="privacy-consent" data-i18n="newsletter.consent">
+                  Acconsento al trattamento dei dati secondo l’informativa privacy. <span class="text-danger">*</span>
+                </label>
+                <div id="privacy-consent-error" class="invalid-feedback d-none" data-i18n="newsletter.consent.error">
+                  Consenso obbligatorio.
+                </div>
+              </div>
+
+              <button type="submit" id="newsletter-submit" class="btn btn-success btn-lg w-100 py-2 fw-semibold">
+                <span data-i18n="newsletter.submit">Iscriviti</span>
+                <span class="spinner-border spinner-border-sm d-none ms-2" role="status" aria-hidden="true"></span>
+              </button>
+
+              <!-- Questo è il target che usa il JS per i messaggi -->
+              <div id="subMsg" class="mt-3"></div>
+            </form>
+
+            <div id="newsletter-success-template" class="d-none text-center py-4">
+              <div class="success-icon bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width:80px;height:80px;">
+                <i class="bi bi-check-lg fs-2"></i>
+              </div>
+              <h3 class="h4 fw-bold text-success mb-3" data-i18n="newsletter.thanks.title">Benvenuto a bordo!</h3>
+              <p class="text-muted mb-0" data-i18n="newsletter.thanks.text">Abbiamo inviato un’email di conferma.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-center mt-4">
+          <button type="button" id="newsletter-unsubscribe" class="btn btn-outline-secondary btn-sm" data-i18n="newsletter.unsubscribe">
+            Disiscrivimi
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Raphael Goumou - Full Stack Developer Portfolio</title>
+  <meta name="description" content="Portfolio de Raphael Goumou – Full Stack Developer spécialisé en développement web moderne, applications responsives et solutions DevOps.">
+  <meta name="theme-color" content="#0d6efd" />
+  <meta name="robots" content="index,follow" />
+  <meta name="color-scheme" content="light dark" />
+
+  <!-- SEO / Open Graph -->
+  <link rel="canonical" href="https://raphaelgoumou.com/">
+  <meta property="og:title" content="Raphael Goumou - Full Stack Developer">
+  <meta property="og:description" content="Développeur Full Stack spécialisé dans les technologies modernes et les solutions innovantes.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://raphaelgoumou.com/">
+  <meta property="og:image" content="https://raphaelgoumou.com/assets/img/logo-goumou-tech.JPG">
+  <meta property="og:locale" content="fr_FR">
+
+  <!-- Performance -->
+  <link rel="dns-prefetch" href="https://api.raphaelgoumou.com">
+  <link rel="preconnect" href="https://api.raphaelgoumou.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+  <!-- Icons / PWA -->
+  <link rel="icon" type="image/png" href="/assets/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-512.png">
+
+  <!-- Preload -->
+  <link rel="preload" as="image" href="/assets/img/logo-goumou-tech.JPG">
+  <link rel="modulepreload" href="/js/config.js">
+  <link rel="modulepreload" href="/js/router.js">
+  <link rel="modulepreload" href="/js/lang.js">
+
+  <!-- Highlight.js (syntax) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/highlight.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/languages/bash.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/languages/powershell.min.js"></script>
+
+  <!-- CSS principali -->
+  <link rel="stylesheet" href="/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/assets/bootstrap-icons/bootstrap-icons.css">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+
+<body>
+  <!-- Skip link accessibilità -->
+  <a class="visually-hidden-focusable position-absolute top-0 start-0 m-2 btn btn-outline-primary" href="#app">
+    Aller au contenu
+  </a>
+
+  <!-- Header / Navbar -->
+  <header role="banner" class="sticky-top">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark" aria-label="Navigation principale">
+      <div class="container">
+        <a class="navbar-brand fw-semibold d-flex align-items-center" href="#" data-page="home" aria-current="page">
+          <img src="/assets/img/logo-goumou-tech.JPG" alt="Logo Goumou Tech" class="brand-logo me-2" width="32" height="32" loading="lazy">
+          <span>Raphael Goumou</span>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                aria-controls="mainNav" aria-expanded="false" aria-label="Ouvrir le menu">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNav">
+          <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+            <li class="nav-item"><a class="nav-link" href="#" data-page="home" data-i18n="nav.home">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="#" data-page="projects" data-i18n="nav.projects">Projets</a></li>
+            <li class="nav-item"><a class="nav-link" href="#" data-page="contact" data-i18n="nav.contact">Contact</a></li>
+            <li class="nav-item"><a class="nav-link" href="#" data-page="newsletter" data-i18n="nav.newsletter">Newsletter</a></li>
+            <li class="nav-item"><a class="nav-link" href="#" data-page="stats" data-i18n="nav.stats">Statistiques</a></li>
+            <li class="nav-item"><a class="nav-link" href="#" data-page="ai" data-i18n="nav.ai">AI</a></li>
+
+            <!-- Compte -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Compte</a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="#" data-page="login" data-i18n="nav.login">Login</a></li>
+                <li><a class="dropdown-item" href="#" data-page="register" data-i18n="nav.register">S'inscrire</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#" data-page="admin" data-i18n="nav.admin">Admin</a></li>
+              </ul>
+            </li>
+
+            <!-- Langue -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="langMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                🌍 <span data-i18n="language.label">Langue</span>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="langMenu">
+                <li><a class="dropdown-item" href="#" data-lang="it">Italiano</a></li>
+                <li><a class="dropdown-item" href="#" data-lang="fr">Français</a></li>
+                <li><a class="dropdown-item" href="#" data-lang="en">English</a></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Contenu principal -->
+  <main id="app" class="py-4" role="main" tabindex="-1" aria-live="polite">
+    <div class="container py-5 text-center">
+      <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+      <p class="mt-3 mb-0">Chargement…</p>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer bg-dark text-light py-5" role="contentinfo">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-4 mb-4">
+          <h5 class="mb-3 d-flex align-items-center">
+            <img src="/assets/img/logo-goumou-tech.JPG" alt="Logo Goumou Tech" class="footer-logo me-2" loading="lazy" width="32" height="32">
+            <span>RG Portfolio</span>
+          </h5>
+          <p class="opacity-75">Full Stack Developer spécialisé en développement web moderne et solutions DevOps.</p>
+        </div>
+        <div class="col-lg-2 col-6 mb-4">
+          <h6 class="mb-3">Navigation</h6>
+          <ul class="list-unstyled">
+            <li><a href="#" class="text-light text-decoration-none opacity-75" data-page="home" data-i18n="nav.home">Home</a></li>
+            <li><a href="#" class="text-light text-decoration-none opacity-75" data-page="projects" data-i18n="nav.projects">Projets</a></li>
+            <li><a href="#" class="text-light text-decoration-none opacity-75" data-page="contact" data-i18n="nav.contact">Contact</a></li>
+            <li><a href="#" class="text-light text-decoration-none opacity-75" data-page="stats" data-i18n="nav.stats">Statistiques</a></li>
+          </ul>
+        </div>
+
+        <div class="col-lg-2 col-6 mb-4">
+          <h6 class="mb-3">Ressources</h6>
+          <ul class="list-unstyled">
+            <li><a href="#" class="text-light text-decoration-none opacity-75" data-page="newsletter" data-i18n="nav.newsletter">Newsletter</a></li>
+            <li><a href="/assets/img/Raphael_Goumou_FullStack_CV.pdf"
+       class="text-light text-decoration-none opacity-75" download>
+       Télécharger CV
+</a></li>
+            <li><a href="#" class="text-light text-decoration-none opacity-75" data-i18n="footer.privacy">Confidentialité</a></li>
+          </ul>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+          <h6 class="mb-3">Contact</h6>
+          <ul class="list-unstyled">
+            <li class="mb-2"><i class="bi bi-envelope me-2"></i><a href="mailto:ggoumou254.gg@gmail.com" class="text-light text-decoration-none">ggoumou254.gg@gmail.com</a></li>
+            <li class="mb-2"><i class="bi bi-telephone me-2"></i><a href="tel:+352621313997" class="text-light text-decoration-none">+352 621 313 997</a></li>
+            <li class="mb-2"><i class="bi bi-geo-alt me-2"></i><span class="opacity-75">Luxembourg</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <hr class="my-4 opacity-25">
+      <div class="text-center">
+        <p class="mb-0">&copy; 2024–2025 Raphael Goumou. Tous droits réservés.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JS -->
+  <script src="/js/vendor/bootstrap.bundle.min.js" defer></script>
+  <script src="/js/boot-config.js" defer></script>
+
+  <!-- Ordre: config avant router/lang -->
+  <script type="module" src="/js/config.js"></script>
+  <script type="module" src="/js/lang.js"></script>
+  <script type="module" src="/js/router.js"></script>
+
+  <script defer src="/js/highlight-init.js"></script>
+
+  <noscript>
+    <div class="container py-4">
+      <div class="alert alert-warning">Veuillez activer JavaScript pour utiliser ce site.</div>
+    </div>
+  </noscript>
+</body>
+</html>

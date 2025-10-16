@@ -1,0 +1,72 @@
+[
+  {
+    "id": "p1",
+    "title": "Portfolio Full Stack",
+    "description": "Sito portfolio responsive con dashboard admin, autenticazione JWT e API REST.",
+    "technologies": ["React", "Node.js", "Express", "MongoDB", "Bootstrap"],
+    "category": "web",
+    "status": "active",
+    "featured": true,
+    "createdAt": "2024-09-10T10:12:00.000Z",
+    "updatedAt": "2025-02-18T19:45:00.000Z",
+    "github": "https://github.com/ggoumou254",
+    "demo": "https://example.com/portfolio",
+    "image": "/assets/img/projects/portfolio-cover.jpg"
+  },
+  {
+    "id": "p2",
+    "title": "API Contacts",
+    "description": "Microservizio REST per gestione contatti con rate limit e logging.",
+    "technologies": ["Node.js", "Express", "MongoDB", "Jest"],
+    "category": "web",
+    "status": "active",
+    "featured": false,
+    "createdAt": "2024-11-02T08:20:00.000Z",
+    "updatedAt": "2025-01-05T09:10:00.000Z",
+    "github": "https://github.com/ggoumou254",
+    "demo": "",
+    "image": ""
+  },
+  {
+    "id": "p3",
+    "title": "Landing Newsletter",
+    "description": "Landing page veloce con form di iscrizione e double opt-in.",
+    "technologies": ["HTML", "CSS", "JavaScript", "Bootstrap"],
+    "category": "web",
+    "status": "draft",
+    "featured": false,
+    "createdAt": "2025-03-01T12:00:00.000Z",
+    "updatedAt": "2025-03-03T16:15:00.000Z",
+    "github": "",
+    "demo": "https://example.com/newsletter",
+    "image": "/assets/img/projects/newsletter.jpg"
+  },
+  {
+    "id": "p4",
+    "title": "Dashboard Analytics",
+    "description": "Dashboard con grafici Chart.js e aggregazioni lato server.",
+    "technologies": ["React", "Chart.js", "Node.js"],
+    "category": "web",
+    "status": "active",
+    "featured": true,
+    "createdAt": "2025-04-10T10:00:00.000Z",
+    "updatedAt": "2025-06-20T18:30:00.000Z",
+    "github": "https://github.com/yourname/analytics-dashboard",
+    "demo": "",
+    "image": "/assets/img/projects/analytics.jpg"
+  },
+  {
+    "id": "p5",
+    "title": "DevOps Pipeline",
+    "description": "Pipeline CI/CD con Docker build e deploy staging.",
+    "technologies": ["Docker", "GitHub Actions", "Node.js"],
+    "category": "web",
+    "status": "archived",
+    "featured": false,
+    "createdAt": "2024-05-20T09:00:00.000Z",
+    "updatedAt": "2024-07-15T09:30:00.000Z",
+    "github": "https://github.com/ggoumou254?tab=repositories",
+    "demo": "",
+    "image": ""
+  }
+]

@@ -1,0 +1,77 @@
+<!-- pages/stats.html -->
+<section class="container py-5">
+  <h1 class="mb-4" data-i18n="stats.title">📊 Statistiche del portfolio</h1>
+
+  <!-- Messaggi di errore -->
+  <div id="stats-error" class="alert alert-danger d-none" role="alert" aria-live="assertive"></div>
+
+  <!-- Cards: totali -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-4">
+      <div class="card text-center shadow h-100">
+        <div class="card-body">
+          <h5 class="card-title" data-i18n="stats.cards.projects">Progetti totali</h5>
+          <p id="total-projects" class="fs-3 fw-bold mb-0">0</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-center shadow h-100">
+        <div class="card-body">
+          <h5 class="card-title" data-i18n="stats.cards.contacts">Messaggi ricevuti</h5>
+          <p id="total-contacts" class="fs-3 fw-bold mb-0">0</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-center shadow h-100">
+        <div class="card-body">
+          <h5 class="card-title" data-i18n="stats.cards.subscribers">Iscritti alla newsletter</h5>
+          <p id="total-subscribers" class="fs-3 fw-bold mb-0">0</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tecnologie (senza Chart.js) -->
+  <div class="row mt-5">
+    <div class="col-12">
+      <div class="card shadow">
+        <div class="card-body">
+          <h4 class="card-title mb-4" data-i18n="stats.tech.title">
+            <i class="bi bi-cpu"></i> Tecnologie più utilizzate
+          </h4>
+
+          <!-- Verrà popolato da js/stats.js -->
+          <div id="tech-list" aria-live="polite">
+            <div class="text-center py-4">
+              <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+              <p class="mt-2 text-muted mb-0">Caricamento tecnologie...</p>
+            </div>
+          </div>
+
+          <noscript>
+            <div class="alert alert-warning mt-3" role="alert">
+              <strong>JavaScript richiesto:</strong> abilitalo per visualizzare le statistiche delle tecnologie.
+            </div>
+          </noscript>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nota informativa -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="alert alert-info">
+        <small>
+          <i class="bi bi-info-circle"></i>
+          Le statistiche sono calcolate in tempo reale a partire dai progetti pubblicati.
+        </small>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Script -->
+<script type="module" src="/js/stats.js" defer></script>

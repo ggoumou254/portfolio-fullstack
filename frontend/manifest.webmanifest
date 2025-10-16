@@ -1,0 +1,21 @@
+{
+  "name": "Raphael Goumou - Portfolio",
+  "short_name": "RaphaelG",
+  "start_url": "/frontend/index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0d6efd",
+  "scope": "/frontend/",
+  "icons": [
+    {
+      "src": "/frontend/assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/frontend/assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "success": true,
+  "data": {
+    "overview": {
+      "totals": {
+        "projects": 12,
+        "contacts": 47,
+        "subscribers": 234,
+        "reviews": 18
+      },
+      "growth": {
+        "projects": [5, 7, 8, 10, 9, 12],
+        "contacts": [15, 22, 28, 35, 41, 47],
+        "subscribers": [89, 112, 145, 178, 205, 234]
+      }
+    },
+    "technologies": {
+      "byCount": [
+        { "tech": "React", "count": 9 },
+        { "tech": "Node.js", "count": 8 },
+        { "tech": "Express", "count": 7 },
+        { "tech": "MongoDB", "count": 6 },
+        { "tech": "Bootstrap", "count": 5 },
+        { "tech": "PostgreSQL", "count": 4 },
+        { "tech": "Docker", "count": 4 },
+        { "tech": "Python", "count": 3 },
+        { "tech": "Tailwind CSS", "count": 3 },
+        { "tech": "Vue.js", "count": 2 }
+      ]
+    }
+  }
+}
