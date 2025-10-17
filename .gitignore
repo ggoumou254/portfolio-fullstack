@@ -1,0 +1,64 @@
+
+
+# --- Node.js ---
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# --- Build e cache ---
+dist/
+build/
+.cache/
+.tmp/
+
+# --- Env e segreti ---
+.env
+.env.*
+!.env.example    NODE_ENV=production
+PORT=5000
+
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=replace_me
+JWT_REFRESH_SECRET=replace_me_too
+
+ADMIN_EMAIL=you@example.com
+RESET_ADMIN_PASSWORD_ON_BOOT=false
+
+FRONTEND_URL=https://raphaelgoumou.com
+BACKEND_URL=https://api.raphaelgoumou.com
+ALLOWED_ORIGINS=https://raphaelgoumou.com,https://www.raphaelgoumou.com
+
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=you@gmail.com
+SMTP_PASS=app_password_here
+
+OPENAI_API_KEY=sk-...
+AI_MODEL=gpt-4o-mini
+AI_EMBEDDING_MODEL=text-embedding-3-small
+AI_LANGS=it,fr,en
+
+uploads/
+*.local.json
+
+# --- Log e file temporanei ---
+logs/
+*.log
+*.pid
+*.seed
+*.tmp
+
+# --- Sistema / IDE ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- OS vari ---
+ehthumbs.db
+desktop.ini
