@@ -5,6 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import path from 'path';
+import fs from 'fs'; // 👈 aggiunto per mkdirSync ROOT/uploads
 import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
@@ -35,6 +36,7 @@ const app = express();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const ROOT = process.cwd(); // 👈 root del progetto (coerente con le routes di upload)
 
 // In hosting dietro proxy (HTTPS/X-Forwarded-Proto)
 app.set('trust proxy', 1);
@@ -52,7 +54,8 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-        imgSrc: ["'self'", "data:", "https:"],
+        imgSrc: ["'self'", "data:", "https:", "blob:"],        // 👈 aggiunto blob: per preview locali
+        mediaSrc: ["'self'", "data:", "https:", "blob:"],      // 👈 se usi <video>/<audio> locali
         fontSrc: ["'self'", "data:", "https://cdn.jsdelivr.net"],
         connectSrc: [
           "'self'",
@@ -93,7 +96,6 @@ app.use(
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    // 👇 aggiungiamo Cache-Control per sbloccare il preflight
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Cache-Control']
   })
 );
@@ -180,9 +182,12 @@ app.use((req, res, next) => {
 });
 
 // ========= STATIC (UPLOADS) =========
+// Servi da ROOT/uploads, coerente con le routes che scrivono in ROOT/uploads/**
+fs.mkdirSync(path.join(ROOT, 'uploads'), { recursive: true });
+
 app.use(
   '/uploads',
-  express.static(path.join(__dirname, 'uploads'), {
+  express.static(path.join(ROOT, 'uploads'), {
     etag: true,
     lastModified: true,
     index: false,
