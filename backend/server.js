@@ -39,32 +39,10 @@ const __dirname = path.dirname(__filename);
 // In hosting dietro proxy (HTTPS/X-Forwarded-Proto)
 app.set('trust proxy', 1);
 
-// ========= ORIGINI & URL =========
-const API_ORIGIN = process.env.BACKEND_URL || '';
-const FRONTEND_ORIGIN = process.env.FRONTEND_URL || '';
-const ALLOWED_FROM_ENV = (process.env.ALLOWED_ORIGINS || '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
-
-// Utility: consenti origin se
-// - non presente (es. curl / healthcheck)
-// - è esattamente in lista
-// - termina con ".up.railway.app" (domini Railway)
-// - è il FRONTEND_ORIGIN o BACKEND_URL
-function isAllowedOrigin(origin) {
-  if (!origin) return true;
-  if (ALLOWED_FROM_ENV.includes(origin)) return true;
-  if (FRONTEND_ORIGIN && origin === FRONTEND_ORIGIN) return true;
-  if (API_ORIGIN && origin === API_ORIGIN) return true;
-  try {
-    const { hostname } = new URL(origin);
-    if (hostname.endsWith('.up.railway.app')) return true;
-  } catch (_) {}
-  return false;
-}
-
 // ========= SECURITY (Helmet) =========
+const API_ORIGIN = process.env.BACKEND_URL || 'http://localhost:5000';
+const FRONTEND_ORIGIN = process.env.FRONTEND_URL || 'http://127.0.0.1:5500';
+
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -78,13 +56,14 @@ app.use(
         fontSrc: ["'self'", "data:", "https://cdn.jsdelivr.net"],
         connectSrc: [
           "'self'",
-          ...(API_ORIGIN ? [API_ORIGIN] : []),
-          ...(FRONTEND_ORIGIN ? [FRONTEND_ORIGIN] : []),
+          API_ORIGIN,
+          FRONTEND_ORIGIN,
+          "https://www.raphaelgoumou.com",
           "https://cdn.jsdelivr.net"
         ],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
-        frameAncestors: ["'self'", ...(FRONTEND_ORIGIN ? [FRONTEND_ORIGIN] : [])]
+        frameAncestors: ["'self'", FRONTEND_ORIGIN, "https://www.raphaelgoumou.com"]
       }
     },
     referrerPolicy: { policy: 'no-referrer' },
@@ -93,12 +72,29 @@ app.use(
 );
 
 // ========= CORS =========
+const envAllowed = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+const ALLOWED = [
+  FRONTEND_ORIGIN,
+  'https://raphaelgoumou.com',
+  'https://www.raphaelgoumou.com',
+  ...envAllowed
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: (origin, cb) => cb(null, isAllowedOrigin(origin)),
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // curl/cron
+      if (ALLOWED.includes(origin)) return cb(null, true);
+      return cb(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+    // 👇 aggiungiamo Cache-Control per sbloccare il preflight
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Cache-Control']
   })
 );
 
@@ -200,18 +196,7 @@ app.use(
   })
 );
 
-// ========= FRONTEND STATIC (opzionale) =========
-// Attiva questa feature mettendo FRONTEND_STATIC=true e assicurati che la cartella ../frontend esista nell’immagine.
-if (process.env.FRONTEND_STATIC === 'true') {
-  const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
-  app.use(express.static(FRONTEND_DIR));
-  app.get('/', (_req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));
-} else {
-  // fallback API root
-  app.get('/', (_req, res) => {
-    res.json({ name: 'Portfolio API', status: 'running' });
-  });
-}
+// ⚠️ NON serviamo asset frontend da Node in produzione: il frontend è su raphaelgoumou.com
 
 // ========= DEV EMAIL ROUTES (solo in dev) =========
 if (process.env.NODE_ENV !== 'production') {
@@ -245,45 +230,41 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/upload', uploadRoutes);
 
-// ========= FALLBACK 404/500 =========
+// ========= FALLBACK solo API =========
+app.get('/', (_req, res) => {
+  res.json({ name: 'Portfolio API', status: 'running' });
+});
+
+// ❗️ Handlers 404/500 (dopo tutte le route)
 app.use(notFound);
 app.use(errorHandler);
 
 // ========= DB =========
-let mongoConnected = false;
-
 async function connectDatabase() {
-  if (!process.env.MONGO_URI) {
-    console.warn('⚠️  MONGO_URI non impostata: avvio senza DB (le rotte DB falliranno finché non la imposti).');
-    return;
-  }
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI, {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000
     });
-    mongoConnected = true;
     console.log(`✅ MongoDB connected: ${conn.connection.host}`);
     mongoose.connection.on('error', (err) => console.error('❌ MongoDB error:', err));
-    mongoose.connection.on('disconnected', () => {
-      mongoConnected = false;
-      console.warn('⚠️  MongoDB disconnected');
-    });
+    mongoose.connection.on('disconnected', () => console.warn('⚠️  MongoDB disconnected'));
   } catch (error) {
     console.error('❌ MongoDB connection failed:', error?.message || error);
-    // Non killare il processo: permetti healthcheck & debug. Re-try manuale con un nuovo deploy.
+    process.exit(1);
   }
 }
 
 async function ensureOwner() {
-  if (!mongoConnected) return;
   const email = (process.env.ADMIN_EMAIL || '').toLowerCase();
   const password = process.env.ADMIN_PASSWORD;
+
   if (!email || !password) {
     console.warn('ADMIN_EMAIL/ADMIN_PASSWORD non settati: skip ensureOwner');
     return;
   }
+
   let user = await User.findOne({ email });
   if (!user) {
     const hash = await bcrypt.hash(password, 12);
@@ -310,13 +291,13 @@ async function ensureOwner() {
 // ========= GRACEFUL SHUTDOWN =========
 process.on('SIGINT', async () => {
   console.log('🛑 SIGINT. Closing DB…');
-  try { await mongoose.connection.close(); } catch {}
+  await mongoose.connection.close();
   console.log('✅ Mongo closed.');
   process.exit(0);
 });
 process.on('SIGTERM', async () => {
   console.log('🛑 SIGTERM. Closing DB…');
-  try { await mongoose.connection.close(); } catch {}
+  await mongoose.connection.close();
   console.log('✅ Mongo closed.');
   process.exit(0);
 });
@@ -325,13 +306,10 @@ process.on('SIGTERM', async () => {
 (async function startServer() {
   await connectDatabase();
   await ensureOwner();
-
   const PORT = process.env.PORT || 5000;
-  const HOST = '0.0.0.0';
-  const server = app.listen(PORT, HOST, () => {
-    console.log(`🚀 Server ${process.env.NODE_ENV || 'development'} listening on http://${HOST}:${PORT}`);
+  const server = app.listen(PORT, () => {
+    console.log(`🚀 Server ${process.env.NODE_ENV || 'development'} on ${API_ORIGIN}`);
   });
-
   server.on('error', (error) => {
     if (error.code === 'EADDRINUSE') console.error(`❌ Port ${PORT} already in use`);
     else console.error('❌ Server error:', error);
