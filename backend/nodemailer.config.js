@@ -12,25 +12,22 @@ const __dirname = path.dirname(__filename);
 // CONFIGURAZIONE EMAIL
 // ====================
 
-// secure: se non specificato, true quando porta=465 (Gmail), altrimenti false
-const PORT = parseInt(process.env.SMTP_PORT || '465', 10);
-const SECURE = process.env.SMTP_SECURE
-  ? process.env.SMTP_SECURE === 'true'
-  : PORT === 465;
+// Se non specificato, secure=true solo se porta=465 (TLS implicito)
+const PORT = Number(process.env.SMTP_PORT || 587);
+const SECURE = (process.env.SMTP_SECURE === 'true') || PORT === 465;
 
 const EMAIL_CONFIG = {
   SMTP: {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: PORT,
-    secure: SECURE, // Gmail: true + 465
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
+    secure: SECURE, // false su 587 (STARTTLS), true su 465 (TLS implicito)
+    auth: (process.env.SMTP_USER && process.env.SMTP_PASS)
+      ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+      : undefined
   },
   DEFAULTS: {
-    from: process.env.EMAIL_FROM || `"Portfolio" <${process.env.SMTP_USER}>`,
-    replyTo: process.env.SMTP_USER,
+    from: process.env.EMAIL_FROM || (process.env.SMTP_USER ? `"Portfolio" <${process.env.SMTP_USER}>` : undefined),
+    replyTo: process.env.SMTP_USER
   },
   ENV: process.env.NODE_ENV || 'development',
   OUTDIR: process.env.EMAIL_OUTPUT_DIR || path.join(__dirname, '_emails'),
@@ -71,27 +68,51 @@ function sanitizeFileName(str = '') {
 }
 
 // ====================
-// CREAZIONE TRANSPORTER
+// CREAZIONE TRANSPORTER (robusto per PaaS)
 // ====================
 let transporter = null;
 
 if (isSmtpConfigured()) {
-  transporter = nodemailer.createTransport(EMAIL_CONFIG.SMTP);
-
-  // Verifica senza warning TS6133
-  transporter.verify((err) => {
-    if (err) {
-      logger.error('Errore verifica SMTP', { message: err.message });
-    } else {
-      logger.success('SMTP verificato', {
-        host: EMAIL_CONFIG.SMTP.host,
-        port: EMAIL_CONFIG.SMTP.port,
-        secure: EMAIL_CONFIG.SMTP.secure,
-      });
+  transporter = nodemailer.createTransport({
+    host: EMAIL_CONFIG.SMTP.host,
+    port: EMAIL_CONFIG.SMTP.port,
+    secure: EMAIL_CONFIG.SMTP.secure,   // false su 587 (STARTTLS)
+    auth: EMAIL_CONFIG.SMTP.auth,
+    pool: true,
+    maxConnections: 3,
+    maxMessages: 100,
+    connectionTimeout: 15000,  // 15s
+    greetingTimeout: 7000,     // 7s
+    socketTimeout: 20000,      // 20s
+    // forza IPv4: spesso i PaaS hanno risoluzioni IPv6 lente/filtrate
+    family: 4,
+    tls: {
+      minVersion: 'TLSv1.2',
+      servername: EMAIL_CONFIG.SMTP.host,
+      // Se vedi errori di certificato in qualche rete intermedia, abilita TEMPORANEAMENTE:
+      // rejectUnauthorized: false,
     }
   });
+
+  // In produzione: verifica non bloccante (non fa fail l'avvio)
+  if (EMAIL_CONFIG.ENV === 'production') {
+    transporter.verify()
+      .then(() => logger.success('SMTP raggiungibile (prod)', {
+        host: EMAIL_CONFIG.SMTP.host, port: EMAIL_CONFIG.SMTP.port, secure: EMAIL_CONFIG.SMTP.secure
+      }))
+      .catch(err => logger.warn('SMTP non raggiungibile ora (prod, non fatale)', { message: err?.message }));
+  } else {
+    // In dev: va bene vedere subito l'errore, aiuta il debug
+    transporter.verify((err) => {
+      if (err) logger.error('Errore verifica SMTP', { message: err.message });
+      else logger.success('SMTP verificato', {
+        host: EMAIL_CONFIG.SMTP.host, port: EMAIL_CONFIG.SMTP.port, secure: EMAIL_CONFIG.SMTP.secure
+      });
+    });
+  }
+
 } else if (EMAIL_CONFIG.ENV === 'development') {
-  // Mock email fallback in dev (scrive su file, non invia realmente)
+  // Mock email in dev (scrive file su disco, non invia)
   logger.warn('Usando fallback email MOCK (dev): salvataggio file in _emails/');
   transporter = {
     sendMail: async (opts) => {
@@ -129,7 +150,7 @@ if (isSmtpConfigured()) {
 }
 
 // ====================
-// FUNZIONE INVIO BASE
+// INVIO
 // ====================
 export async function sendMail({ to, subject, html, text }) {
   if (!transporter) throw new Error('SMTP non configurato');
@@ -153,7 +174,7 @@ export async function sendMail({ to, subject, html, text }) {
 }
 
 // ====================
-// STATO CONFIGURAZIONE
+// STATO CONFIG
 // ====================
 export function getEmailStatus() {
   return {
@@ -163,7 +184,7 @@ export function getEmailStatus() {
       host: EMAIL_CONFIG.SMTP.host,
       port: EMAIL_CONFIG.SMTP.port,
       secure: EMAIL_CONFIG.SMTP.secure,
-      user: EMAIL_CONFIG.SMTP.auth.user ? `${EMAIL_CONFIG.SMTP.auth.user.slice(0, 3)}...` : 'non configurato',
+      user: EMAIL_CONFIG.SMTP.auth?.user ? `${EMAIL_CONFIG.SMTP.auth.user.slice(0, 3)}...` : 'non configurato',
     },
     outputDir: EMAIL_CONFIG.OUTDIR,
   };
