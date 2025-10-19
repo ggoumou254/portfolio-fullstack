@@ -43,17 +43,25 @@ router.use((req, _res, next) => {
 });
 
 /* =========================
-   Upload config (backend/uploads/projects)
+   Upload config => usa ROOT/uploads/projects
 ========================= */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const uploadDir = path.join(__dirname, '../uploads/projects');
+const ROOT = process.cwd();
+
+const uploadRoot = path.join(ROOT, 'uploads');
+const uploadDir = path.join(uploadRoot, 'projects');
 
 const ensureUploadDir = async () => {
-  try { await fs.access(uploadDir); }
-  catch { await fs.mkdir(uploadDir, { recursive: true }); }
+  try {
+    // crea /uploads e /uploads/projects se mancano
+    await fs.mkdir(uploadRoot, { recursive: true });
+    await fs.mkdir(uploadDir, { recursive: true });
+  } catch (e) {
+    console.error('❌ ensureUploadDir error:', e);
+  }
 };
-ensureUploadDir();
+await ensureUploadDir();
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),
@@ -166,6 +174,7 @@ const normalizeProjectBody = (req, _res, next) => {
   if (!b.status || b.status === '') b.status = 'published';
 
   if (req.file && !b.image) {
+    // salva path pubblico coerente con app.use('/uploads', express.static(...))
     b.image = `/uploads/projects/${req.file.filename}`;
   }
 
@@ -184,7 +193,7 @@ const normalizeProjectQuery = (req, res, next) => {
     q.featured = ['true', '1', 'yes', 'on'].includes(q.featured.toLowerCase());
   }
 
-  // page -> int >= 1
+  // page -> int ≥ 1
   if (typeof q.page === 'string') {
     const p = Number.parseInt(q.page, 10);
     if (Number.isFinite(p) && p >= 1) q.page = String(p);
@@ -209,7 +218,7 @@ const normalizeProjectQuery = (req, res, next) => {
     }
   }
 
-  // ❗ Importante: in Express 5 req.query è un getter: non riassegnare!
+  // ❗ In Express 5 req.query è un getter: non riassegnare
   Object.assign(req.query, q);
   next();
 };
@@ -273,14 +282,22 @@ const queryValidation = [
 // LIST pubblica (normalize PRIMA dei validator)
 router.get('/', publicLimiter, normalizeProjectQuery, queryValidation, validate, listProjects);
 
-// Featured (riuso controller list) — modifichiamo le proprietà, non riassegnamo req.query
-router.get('/featured', publicLimiter, (req, res) => {
-  req.query.featured = 'true';
-  req.query.status = 'published';
-  if (!req.query.limit) req.query.limit = '6';
-  if (!req.query.sort) req.query.sort = '-createdAt';
-  return listProjects(req, res);
-});
+// Featured: riusa normalize + validators + controller
+router.get(
+  '/featured',
+  publicLimiter,
+  (req, _res, next) => {
+    req.query.featured = 'true';
+    req.query.status = 'published';
+    if (!req.query.limit) req.query.limit = '6';
+    if (!req.query.sort) req.query.sort = '-createdAt';
+    next();
+  },
+  normalizeProjectQuery,
+  queryValidation,
+  validate,
+  listProjects
+);
 
 // Admin: pubblica tutti (utility)
 router.post('/publish-all', verifyToken, requireAdmin, async (_req, res) => {
