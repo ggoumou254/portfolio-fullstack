@@ -4,7 +4,8 @@ WORKDIR /app
 
 # Installa solo prod deps
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
+
 
 # Copia il resto del codice
 COPY . .
