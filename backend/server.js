@@ -5,7 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import path from 'path';
-import fs from 'fs'; // 👈 aggiunto per mkdirSync ROOT/uploads
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
@@ -36,7 +36,7 @@ const app = express();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT = process.cwd(); // 👈 root del progetto (coerente con le routes di upload)
+const ROOT = process.cwd(); // root del progetto (coerente con uploadRoutes)
 
 // In hosting dietro proxy (HTTPS/X-Forwarded-Proto)
 app.set('trust proxy', 1);
@@ -54,8 +54,8 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-        imgSrc: ["'self'", "data:", "https:", "blob:"],        // 👈 aggiunto blob: per preview locali
-        mediaSrc: ["'self'", "data:", "https:", "blob:"],      // 👈 se usi <video>/<audio> locali
+        imgSrc: ["'self'", "data:", "https:", "blob:"],   // preview locali / canvas
+        mediaSrc: ["'self'", "data:", "https:", "blob:"], // <video>/<audio> locali
         fontSrc: ["'self'", "data:", "https://cdn.jsdelivr.net"],
         connectSrc: [
           "'self'",
@@ -96,9 +96,18 @@ app.use(
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Cache-Control']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Cache-Control', 'X-Requested-With'],
+    exposedHeaders: ['X-Request-Id']
   })
 );
+
+// piccolo handler per errori CORS leggibili
+app.use((err, _req, res, next) => {
+  if (err?.message?.startsWith('CORS blocked')) {
+    return res.status(403).json({ success: false, message: err.message, code: 'CORS_FORBIDDEN' });
+  }
+  next(err);
+});
 
 // ========= PERFORMANCE & BODY =========
 app.use(compression());
@@ -182,22 +191,36 @@ app.use((req, res, next) => {
 });
 
 // ========= STATIC (UPLOADS) =========
-// Servi da ROOT/uploads, coerente con le routes che scrivono in ROOT/uploads/**
+// Crea ROOT/uploads se non esiste
 fs.mkdirSync(path.join(ROOT, 'uploads'), { recursive: true });
 
+const staticHeaders = (res, filePath) => {
+  if (/\.(png|jpe?g|webp|gif|svg|pdf|docx?|zip|mp4|mp3|webm|ogg)$/i.test(filePath)) {
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable'); // 7gg
+  } else {
+    res.setHeader('Cache-Control', 'no-cache');
+  }
+};
+
+// Mount principale: ROOT/uploads
 app.use(
   '/uploads',
   express.static(path.join(ROOT, 'uploads'), {
     etag: true,
     lastModified: true,
     index: false,
-    setHeaders(res, filePath) {
-      if (/\.(png|jpe?g|webp|gif|svg|pdf|docx?|zip)$/i.test(filePath)) {
-        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
-      } else {
-        res.setHeader('Cache-Control', 'no-cache');
-      }
-    }
+    setHeaders: staticHeaders
+  })
+);
+
+// Fallback legacy: backend/uploads (se hai file vecchi)
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, 'uploads'), {
+    etag: true,
+    lastModified: true,
+    index: false,
+    setHeaders: staticHeaders
   })
 );
 
