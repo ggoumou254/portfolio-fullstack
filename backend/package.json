@@ -16,6 +16,7 @@
     "bench": "PERF_MAX_AVG=120 PERF_MAX_P95=300 node scripts/smoke-and-bench.mjs --base http://localhost:5000",
     "ratelimit": "node scripts/smoke-and-bench.mjs --base http://localhost:5000 --ratelimit",
     "ai:index": "node scripts/ai-index.mjs",
+      "fix:images": "node scripts/fix-project-images.mjs",
     "ai:reindex": "node scripts/ai-index.mjs"
   },
   "keywords": [],
