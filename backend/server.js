@@ -36,7 +36,7 @@ const app = express();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT = process.cwd(); // root del progetto (coerente con uploadRoutes)
+const ROOT = process.cwd(); // root progetto (coerente con uploadRoutes)
 
 // In hosting dietro proxy (HTTPS/X-Forwarded-Proto)
 app.set('trust proxy', 1);
@@ -54,8 +54,8 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-        imgSrc: ["'self'", "data:", "https:", "blob:"],   // preview locali / canvas
-        mediaSrc: ["'self'", "data:", "https:", "blob:"], // <video>/<audio> locali
+        imgSrc: ["'self'", "data:", "https:", "blob:"],
+        mediaSrc: ["'self'", "data:", "https:", "blob:"],
         fontSrc: ["'self'", "data:", "https://cdn.jsdelivr.net"],
         connectSrc: [
           "'self'",
@@ -101,7 +101,7 @@ app.use(
   })
 );
 
-// piccolo handler per errori CORS leggibili
+// Handler errori CORS leggibile
 app.use((err, _req, res, next) => {
   if (err?.message?.startsWith('CORS blocked')) {
     return res.status(403).json({ success: false, message: err.message, code: 'CORS_FORBIDDEN' });
@@ -223,6 +223,43 @@ app.use(
     setHeaders: staticHeaders
   })
 );
+
+// --- FALLBACK senza symlink: projects → images ---
+app.use('/uploads/projects', (req, res, next) => {
+  const url = (req.url || '').replace(/^\/+/, '');
+  const candidate = path.join(ROOT, 'uploads', 'images', url);
+  fs.stat(candidate, (err, stat) => {
+    if (!err && stat.isFile()) {
+      return res.sendFile(candidate, { headers: { 'Cache-Control': 'public, max-age=604800, immutable' } });
+    }
+    // prova anche nel legacy backend/uploads/images
+    const legacy = path.join(__dirname, 'uploads', 'images', url);
+    fs.stat(legacy, (e2, st2) => {
+      if (!e2 && st2.isFile()) {
+        return res.sendFile(legacy, { headers: { 'Cache-Control': 'public, max-age=604800, immutable' } });
+      }
+      next();
+    });
+  });
+});
+
+// --- FALLBACK inverso: images → projects (opzionale ma utile) ---
+app.use('/uploads/images', (req, res, next) => {
+  const url = (req.url || '').replace(/^\/+/, '');
+  const candidate = path.join(ROOT, 'uploads', 'projects', url);
+  fs.stat(candidate, (err, stat) => {
+    if (!err && stat.isFile()) {
+      return res.sendFile(candidate, { headers: { 'Cache-Control': 'public, max-age=604800, immutable' } });
+    }
+    const legacy = path.join(__dirname, 'uploads', 'projects', url);
+    fs.stat(legacy, (e2, st2) => {
+      if (!e2 && st2.isFile()) {
+        return res.sendFile(legacy, { headers: { 'Cache-Control': 'public, max-age=604800, immutable' } });
+      }
+      next();
+    });
+  });
+});
 
 // ⚠️ NON serviamo asset frontend da Node in produzione: il frontend è su raphaelgoumou.com
 
