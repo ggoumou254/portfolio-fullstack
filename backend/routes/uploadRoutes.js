@@ -32,6 +32,7 @@ const UPLOAD_CONFIG = {
   DIR: {
     ROOT: 'uploads',
     IMAGES: 'uploads/images',
+    PROJECTS: 'uploads/projects',          // ⬅️ aggiunto
     DOCUMENTS: 'uploads/documents',
     ARCHIVES: 'uploads/archives',
     TEMP: 'uploads/temp'
@@ -56,8 +57,12 @@ const ensureUploadDirs = async () => {
     for (const dir of Object.values(UPLOAD_CONFIG.DIR)) {
       await fs.mkdir(dir, { recursive: true });
     }
-    // crea un .gitkeep se vuoi
-    for (const d of [UPLOAD_CONFIG.DIR.IMAGES, UPLOAD_CONFIG.DIR.DOCUMENTS, UPLOAD_CONFIG.DIR.ARCHIVES]) {
+    for (const d of [
+      UPLOAD_CONFIG.DIR.IMAGES,
+      UPLOAD_CONFIG.DIR.PROJECTS,        // ⬅️ aggiunto
+      UPLOAD_CONFIG.DIR.DOCUMENTS,
+      UPLOAD_CONFIG.DIR.ARCHIVES
+    ]) {
       const keep = path.join(d, '.keep');
       if (!fsSync.existsSync(keep)) fsSync.writeFileSync(keep, '');
     }
@@ -68,14 +73,23 @@ const ensureUploadDirs = async () => {
 };
 ensureUploadDirs();
 
+// Fallback pubblico se non usiamo app.locals.buildUploadUrl
 const publicUrlFor = (destAbsoluteOrRelative, filename) => {
-  // dest: es. "uploads/images" -> url: "/uploads/images/<file>"
   const rel = destAbsoluteOrRelative.replace(/\\/g, '/'); // win compat
   const base = rel.startsWith('/') ? rel : '/' + rel;
   return `${base}/${filename}`.replace(/\/+/g, '/');
 };
 
-// piccola sanitizzazione nome file
+// Wrapper per usare buildUploadUrl del server se presente
+const buildUrl = (req, subdir, filename) => {
+  if (req?.app?.locals?.buildUploadUrl) {
+    return req.app.locals.buildUploadUrl(subdir, filename);
+  }
+  // fallback locale
+  return publicUrlFor(path.posix.join('uploads', subdir), filename);
+};
+
+// Sanitizza nome base
 const safeBaseName = (name) =>
   String(name || '')
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -101,13 +115,32 @@ const sizeLimitForMime = (mime) => {
 /* =========================
    Multer storage & filter
 ========================= */
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, guessBucketForMime(file.mimetype)),
+// Storage “generico”: bucket in base al mime
+const genericStorage = multer.diskStorage({
+  destination: (_req, file, cb) => cb(null, guessBucketForMime(file.mimetype)),
   filename: (_req, file, cb) => {
     const ts = Date.now();
     const rnd = Math.random().toString(36).slice(2, 9);
     const ext = path.extname(file.originalname) || '';
     const base = safeBaseName(path.parse(file.originalname).name || 'file');
+    cb(null, `${base}-${ts}-${rnd}${ext}`);
+  }
+});
+
+// Storage “progetti”: forza la cartella /uploads/projects (dal server se disponibile)
+const projectsStorage = (req) => multer.diskStorage({
+  destination: (_r, file, cb) => {
+    const projectsDir =
+      req?.app?.locals?.PROJECTS_DIR ||    // definito in server.js
+      path.join(process.cwd(), 'uploads', 'projects');
+    fsSync.mkdirSync(projectsDir, { recursive: true });
+    cb(null, projectsDir);
+  },
+  filename: (_r, file, cb) => {
+    const ts = Date.now();
+    const rnd = Math.random().toString(36).slice(2, 9);
+    const ext = path.extname(file.originalname) || '';
+    const base = safeBaseName(path.parse(file.originalname).name || 'project');
     cb(null, `${base}-${ts}-${rnd}${ext}`);
   }
 });
@@ -119,18 +152,17 @@ const fileFilter = (_req, file, cb) => {
   cb(err, false);
 };
 
-// wrapper che applica limiti dinamici per singolo file
+// Multer helpers
 function makeMulterSingle(field) {
   return (req, res, next) => {
     const upload = multer({
-      storage,
+      storage: genericStorage,
       fileFilter,
-      limits: { fileSize: UPLOAD_CONFIG.MAX_BYTES.DEFAULT } // limite base; verifichiamo dopo con per-mime
+      limits: { fileSize: UPLOAD_CONFIG.MAX_BYTES.DEFAULT }
     }).single(field);
 
     upload(req, res, (err) => {
       if (err) return handleMulterErr(res, err);
-      // limite “fine” per mime specifico
       if (req.file) {
         const max = sizeLimitForMime(req.file.mimetype);
         if (req.file.size > max) {
@@ -146,20 +178,17 @@ function makeMulterSingle(field) {
 function makeMulterArray(field, maxCount = 10) {
   return (req, res, next) => {
     const upload = multer({
-      storage,
+      storage: genericStorage,
       fileFilter,
       limits: { fileSize: UPLOAD_CONFIG.MAX_BYTES.DEFAULT }
     }).array(field, maxCount);
 
     upload(req, res, async (err) => {
       if (err) return handleMulterErr(res, err);
-
-      // verifica limiti per ciascun file
       if (req.files?.length) {
         for (const f of req.files) {
           const max = sizeLimitForMime(f.mimetype);
           if (f.size > max) {
-            // cleanup tutti i caricati
             await Promise.all(req.files.map(x => fs.unlink(x.path).catch(() => {})));
             return res.status(413).json({
               success: false,
@@ -174,11 +203,33 @@ function makeMulterArray(field, maxCount = 10) {
   };
 }
 
+// Multer per PROGETTI (array di immagini)
+function makeMulterArrayProjects(field, maxCount = 6) {
+  return (req, res, next) => {
+    const upload = multer({
+      storage: projectsStorage(req),
+      fileFilter: (r, file, cb) => {
+        // solo immagini per i progetti
+        if (UPLOAD_CONFIG.ALLOWED_MIME.IMAGES.includes(file.mimetype)) return cb(null, true);
+        const err = new Error(`Tipo immagine non permesso: ${file.mimetype}`);
+        err.code = 'INVALID_IMAGE_TYPE';
+        cb(err, false);
+      },
+      limits: { fileSize: UPLOAD_CONFIG.MAX_BYTES.IMAGE }
+    }).array(field, maxCount);
+
+    upload(req, res, (err) => {
+      if (err) return handleMulterErr(res, err);
+      next();
+    });
+  };
+}
+
 function handleMulterErr(res, err) {
   if (err?.code === 'LIMIT_FILE_SIZE') {
     return res.status(413).json({ success: false, message: 'File troppo grande', code: 'FILE_TOO_LARGE' });
   }
-  if (err?.code === 'INVALID_FILE_TYPE') {
+  if (err?.code === 'INVALID_FILE_TYPE' || err?.code === 'INVALID_IMAGE_TYPE') {
     return res.status(415).json({ success: false, message: err.message || 'Tipo non permesso', code: 'INVALID_FILE_TYPE' });
   }
   return res.status(400).json({ success: false, message: 'Errore upload', code: 'UPLOAD_ERROR' });
@@ -192,7 +243,6 @@ async function isSvgSafe(filePath) {
   try {
     const txt = await fs.readFile(filePath, 'utf8');
     const lower = txt.toLowerCase();
-    // blocca script/handler/foreignObject
     if (lower.includes('<script') || /on\w+=/i.test(lower) || lower.includes('<foreignobject')) {
       return false;
     }
@@ -220,7 +270,7 @@ router.post(
         return res.status(400).json({ success: false, message: 'Nessun file', code: 'NO_FILE' });
       }
 
-      // controllo SVG
+      // SVG check
       if (isSvg(req.file.mimetype)) {
         const ok = await isSvgSafe(req.file.path);
         if (!ok) {
@@ -262,6 +312,75 @@ router.post(
 );
 
 /**
+ * 🔵 POST /api/upload/project-images
+ * Campo: "images" (max 6) — salva in /uploads/projects e ritorna URL web coerenti
+ */
+router.post(
+  '/project-images',
+  verifyToken,
+  requireRole(['admin', 'moderator']),
+  makeMulterArrayProjects('images', 6),
+  async (req, res) => {
+    try {
+      if (!req.files?.length) {
+        return res.status(400).json({ success: false, message: 'Nessuna immagine', code: 'NO_IMAGES' });
+      }
+
+      const results = [];
+      for (const f of req.files) {
+        // sicurezza SVG
+        if (isSvg(f.mimetype)) {
+          const ok = await isSvgSafe(f.path);
+          if (!ok) {
+            await fs.unlink(f.path).catch(() => {});
+            return res.status(415).json({ success: false, message: 'SVG non sicuro', code: 'UNSAFE_SVG' });
+          }
+        }
+
+        // opzionale: piccola ottimizzazione per jpg/png/webp (no svg/gif)
+        const isGif = f.mimetype === 'image/gif';
+        if (!isGif && !isSvg(f.mimetype)) {
+          try {
+            const meta = await sharp(f.path).metadata();
+            let pipeline = sharp(f.path).withMetadata({ orientation: true });
+            if (meta.width && meta.width > UPLOAD_CONFIG.IMG.MAX_WIDTH) {
+              pipeline = pipeline.resize(UPLOAD_CONFIG.IMG.MAX_WIDTH);
+            }
+            const fmt = (meta.format || '').toLowerCase();
+            const tmpOut = f.path + '.opt';
+            if (fmt === 'png') pipeline = pipeline.png({ quality: UPLOAD_CONFIG.IMG.QUALITY });
+            else if (fmt === 'webp') pipeline = pipeline.webp({ quality: UPLOAD_CONFIG.IMG.QUALITY });
+            else pipeline = pipeline.jpeg({ quality: UPLOAD_CONFIG.IMG.QUALITY });
+            await pipeline.toFile(tmpOut);
+            await fs.unlink(f.path);
+            await fs.rename(tmpOut, f.path);
+          } catch (e) {
+            console.warn('⚠️ Project image optimization failed:', e.message);
+          }
+        }
+
+        results.push({
+          url: buildUrl(req, 'projects', path.basename(f.filename)), // ⬅️ URL WEB CORRETTO
+          name: f.originalname,
+          size: f.size,
+          mimetype: f.mimetype,
+          filename: f.filename
+        });
+      }
+
+      console.log('✅ Project images uploaded:', { count: results.length, user: req.user.id });
+      return res.json({ ok: true, files: results, code: 'PROJECT_IMAGES_UPLOADED' });
+    } catch (error) {
+      console.error('❌ Project images upload error:', error);
+      if (req.files?.length) {
+        await Promise.all(req.files.map(x => fs.unlink(x.path).catch(() => {})));
+      }
+      return res.status(500).json({ success: false, message: 'Errore upload immagini progetto', code: 'PROJECT_IMAGES_UPLOAD_ERROR' });
+    }
+  }
+);
+
+/**
  * POST /api/upload/images (immagine singola con ottimizzazione)
  * Campo: "image"
  */
@@ -281,7 +400,6 @@ router.post(
         return res.status(415).json({ success: false, message: 'Tipo immagine non supportato', code: 'INVALID_IMAGE_TYPE' });
       }
 
-      // blocca SVG pericolosi
       if (isSvg(req.file.mimetype)) {
         const ok = await isSvgSafe(req.file.path);
         if (!ok) {
@@ -292,7 +410,6 @@ router.post(
 
       let dimensions = null;
 
-      // niente ottimizzazione per SVG/GIF
       const isGif = req.file.mimetype === 'image/gif';
       if (!isSvg(req.file.mimetype) && !isGif) {
         try {
@@ -301,33 +418,21 @@ router.post(
 
           dimensions = { width: meta.width, height: meta.height };
 
-          // resize + qualità + strip metadata
-          if (meta.width && meta.width > UPLOAD_CONFIG.IMG.MAX_WIDTH) {
-            const tmpOut = req.file.path + '.opt';
-            let pipeline = img.resize(UPLOAD_CONFIG.IMG.MAX_WIDTH);
-            // preserva formato originario
-            const fmt = (meta.format || '').toLowerCase();
-            if (fmt === 'png') pipeline = pipeline.png({ quality: UPLOAD_CONFIG.IMG.QUALITY });
-            else if (fmt === 'webp') pipeline = pipeline.webp({ quality: UPLOAD_CONFIG.IMG.QUALITY });
-            else pipeline = pipeline.jpeg({ quality: UPLOAD_CONFIG.IMG.QUALITY });
-            await pipeline.toFile(tmpOut);
-            await fs.unlink(req.file.path);
-            await fs.rename(tmpOut, req.file.path);
+          const tmpOut = req.file.path + '.opt';
+          let pipeline = img;
+          if (meta.width && meta.width > UPLOAD_CONFIG.IMG.MAX_WIDTH) pipeline = pipeline.resize(UPLOAD_CONFIG.IMG.MAX_WIDTH);
 
-            const meta2 = await sharp(req.file.path).metadata();
-            dimensions = { width: meta2.width, height: meta2.height };
-          } else {
-            // strip metadati anche se non ridimensioniamo
-            const tmpOut = req.file.path + '.opt';
-            const fmt = (meta.format || '').toLowerCase();
-            let pipeline = img;
-            if (fmt === 'png') pipeline = pipeline.png({ quality: UPLOAD_CONFIG.IMG.QUALITY });
-            else if (fmt === 'webp') pipeline = pipeline.webp({ quality: UPLOAD_CONFIG.IMG.QUALITY });
-            else pipeline = pipeline.jpeg({ quality: UPLOAD_CONFIG.IMG.QUALITY });
-            await pipeline.toFile(tmpOut);
-            await fs.unlink(req.file.path);
-            await fs.rename(tmpOut, req.file.path);
-          }
+          const fmt = (meta.format || '').toLowerCase();
+          if (fmt === 'png') pipeline = pipeline.png({ quality: UPLOAD_CONFIG.IMG.QUALITY });
+          else if (fmt === 'webp') pipeline = pipeline.webp({ quality: UPLOAD_CONFIG.IMG.QUALITY });
+          else pipeline = pipeline.jpeg({ quality: UPLOAD_CONFIG.IMG.QUALITY });
+
+          await pipeline.toFile(tmpOut);
+          await fs.unlink(req.file.path);
+          await fs.rename(tmpOut, req.file.path);
+
+          const meta2 = await sharp(req.file.path).metadata();
+          dimensions = { width: meta2.width, height: meta2.height };
         } catch (e) {
           console.warn('⚠️ Image optimization failed:', e.message);
         }
@@ -420,7 +525,13 @@ router.delete('/:filename', verifyToken, requireAdmin, async (req, res) => {
     }
 
     let filePath = null;
-    for (const dir of [UPLOAD_CONFIG.DIR.IMAGES, UPLOAD_CONFIG.DIR.DOCUMENTS, UPLOAD_CONFIG.DIR.ARCHIVES, UPLOAD_CONFIG.DIR.TEMP]) {
+    for (const dir of [
+      UPLOAD_CONFIG.DIR.IMAGES,
+      UPLOAD_CONFIG.DIR.PROJECTS,     // ⬅️ controlla anche qui
+      UPLOAD_CONFIG.DIR.DOCUMENTS,
+      UPLOAD_CONFIG.DIR.ARCHIVES,
+      UPLOAD_CONFIG.DIR.TEMP
+    ]) {
       const candidate = path.join(dir, filename);
       try {
         await fs.access(candidate);
@@ -456,10 +567,10 @@ router.get('/list', verifyToken, requireAdmin, async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
 
     let directories = [];
-    if (type === 'images') directories = [UPLOAD_CONFIG.DIR.IMAGES];
+    if (type === 'images') directories = [UPLOAD_CONFIG.DIR.IMAGES, UPLOAD_CONFIG.DIR.PROJECTS]; // ⬅️ includi projects
     else if (type === 'documents') directories = [UPLOAD_CONFIG.DIR.DOCUMENTS];
     else if (type === 'archives') directories = [UPLOAD_CONFIG.DIR.ARCHIVES];
-    else directories = [UPLOAD_CONFIG.DIR.IMAGES, UPLOAD_CONFIG.DIR.DOCUMENTS, UPLOAD_CONFIG.DIR.ARCHIVES];
+    else directories = [UPLOAD_CONFIG.DIR.IMAGES, UPLOAD_CONFIG.DIR.PROJECTS, UPLOAD_CONFIG.DIR.DOCUMENTS, UPLOAD_CONFIG.DIR.ARCHIVES];
 
     const allFiles = [];
 
@@ -473,7 +584,7 @@ router.get('/list', verifyToken, requireAdmin, async (req, res) => {
             if (stats.isFile()) {
               allFiles.push({
                 filename: file,
-                url: publicUrlFor(dir, file),         // ← URL pubblico
+                url: publicUrlFor(dir, file),
                 directory: dir,
                 size: stats.size,
                 createdAt: stats.birthtime,
