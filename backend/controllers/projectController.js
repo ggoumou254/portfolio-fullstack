@@ -10,9 +10,9 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const UPLOADS_DIR = path.join(__dirname, '../../uploads/projects');
+const UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'projects'); // robusto
 const ALLOWED_IMAGE_TYPES = [
-  'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml' // +SVG
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'
 ];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -49,7 +49,7 @@ const ALLOWED_SORTS = new Set([
 ]);
 
 /* ============================================
-   Helper
+   Helpers
 ============================================ */
 const safeStr = (v, max = 2000) =>
   String(v ?? '').replace(/<[^>]*>/g, '').trim().slice(0, max);
@@ -58,12 +58,11 @@ const parseTechnologies = (technologies) => {
   if (Array.isArray(technologies)) return technologies.map(t => safeStr(t, 40)).filter(Boolean);
   if (typeof technologies === 'string') {
     const s = technologies.trim();
-    // supporto anche JSON array in stringa
     if (s.startsWith('[')) {
       try {
         const arr = JSON.parse(s);
         if (Array.isArray(arr)) return arr.map(t => safeStr(t, 40)).filter(Boolean);
-      } catch {/* fallback sotto */}
+      } catch {/* ignore */}
     }
     return s.split(',').map(t => safeStr(t, 40)).filter(Boolean);
   }
@@ -89,22 +88,90 @@ const validateFile = (file) => {
   return { isValid: true };
 };
 
+const toFsPath = (u) => {
+  // accetta "/uploads/..." o "uploads/..."
+  const rel = String(u || '').replace(/^\/+/, '');
+  return path.join(process.cwd(), rel);
+};
+
 const deleteOldImage = async (imagePath) => {
   if (!imagePath) return;
   try {
-    // imagePath es.: "/uploads/projects/xxx.jpg"
-    const relative = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
-    const full = path.join(process.cwd(), relative);
+    const full = toFsPath(imagePath);
     await fs.unlink(full);
-    console.log(`🗑️ Old image deleted: ${relative}`);
+    console.log(`🗑️ Old image deleted: ${imagePath}`);
   } catch (err) {
     if (err.code !== 'ENOENT') console.warn('⚠️ Could not delete old image:', err.message);
   }
 };
 
-// Incluso slug e liveDemo per coerenza con il model
+/** Normalizza `images` dal body in array di oggetti {url,alt,caption,order} */
+const parseImagesArray = (images) => {
+  if (!images) return [];
+  let arr = images;
+
+  // supporta JSON in stringa
+  if (typeof images === 'string') {
+    const s = images.trim();
+    try { arr = JSON.parse(s); }
+    catch { arr = s.split(',').map(x => x.trim()).filter(Boolean); }
+  }
+
+  if (!Array.isArray(arr)) return [];
+
+  // mappa sia string → {url} che oggetto → {url,alt,caption,order}
+  const mapped = arr
+    .map((it, idx) => {
+      if (typeof it === 'string') {
+        const url = it.trim();
+        if (!url) return null;
+        return { url, alt: '', caption: '', order: idx };
+      }
+      if (it && typeof it === 'object' && typeof it.url === 'string' && it.url.trim()) {
+        return {
+          url: it.url.trim(),
+          alt: safeStr(it.alt || '', 100),
+          caption: safeStr(it.caption || '', 200),
+          order: Number.isFinite(it.order) ? it.order : idx
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
+
+  // normalizza i path "uploads/..." in "/uploads/..."
+  for (const m of mapped) {
+    if (!m.url.startsWith('/')) m.url = '/' + m.url;
+    m.url = m.url.replace(/\/{2,}/g, '/');
+  }
+
+  // ordina per order
+  mapped.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  return mapped;
+};
+
+/** Output snello per il client */
 const sanitizeProject = (project) => {
   const obj = project?.toObject ? project.toObject() : project || {};
+
+  // esponi galleria `images` come array di oggetti {url,alt,caption,order}
+  const images = Array.isArray(obj.images)
+    ? obj.images
+        .map(x => (typeof x === 'string' ? { url: x } : x))
+        .filter(x => x && typeof x.url === 'string' && x.url.trim())
+        .map((x, i) => ({
+          url: x.url.startsWith('/') ? x.url : `/${x.url}`,
+          alt: x.alt || '',
+          caption: x.caption || '',
+          order: Number.isFinite(x.order) ? x.order : i
+        }))
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    : [];
+
+  // cover: se manca `image`, usa la prima di `images`
+  const cover = obj.image || (images[0]?.url ?? '');
+
   return {
     id: String(obj._id || ''),
     title: obj.title,
@@ -114,8 +181,9 @@ const sanitizeProject = (project) => {
     technologies: Array.isArray(obj.technologies) ? obj.technologies : [],
     github: obj.github || '',
     liveDemo: obj.liveDemo || '',
-    demo: obj.liveDemo || '', // alias backward compat
-    image: obj.image || '',
+    demo: obj.liveDemo || '', // alias
+    image: cover ? (cover.startsWith('/') ? cover : `/${cover}`) : '',
+    images, // array di oggetti coerente con lo schema
     featured: !!obj.featured,
     status: obj.status || 'published',
     likes: obj.likes ?? 0,
@@ -228,7 +296,7 @@ export const listProjects = async (req, res) => {
         },
       },
       code: 'PROJECTS_RETRIEVED',
-      // ✅ compat
+      // compat
       items: mapped,
       total,
       page: pageNum,
@@ -255,7 +323,6 @@ export const getProject = async (req, res) => {
       return res.status(404).json({ success: false, message: MESSAGES.PROJECT.NOT_FOUND, code: 'PROJECT_NOT_FOUND' });
     }
 
-    // pubblico: mostra solo published (admin vede anche draft/archived)
     const isAdmin = !!req.user && (req.user.role === 'admin');
     if (project.status !== 'published' && !isAdmin) {
       return res.status(404).json({ success: false, message: MESSAGES.PROJECT.NOT_FOUND, code: 'PROJECT_NOT_FOUND' });
@@ -267,7 +334,6 @@ export const getProject = async (req, res) => {
       message: MESSAGES.PROJECT.SINGLE_SUCCESS,
       data: { project: item },
       code: 'PROJECT_RETRIEVED',
-      // compat
       item
     });
   } catch (error) {
@@ -289,7 +355,8 @@ export const createProject = async (req, res) => {
       liveDemo,
       featured = false,
       status = 'published',
-      slug
+      slug,
+      images // <— supporto galleria dal body
     } = req.body || {};
 
     console.log('📝 createProject - Dati:', { title, status, featured, user: req.user?.id });
@@ -319,10 +386,14 @@ export const createProject = async (req, res) => {
       featured: parseBool(featured) === true,
       status: finalStatus,
       author: req.user?.id || null,
-      publishedAt: finalStatus === 'published' ? new Date() : null
+      publishedAt: finalStatus === 'published' ? new Date() : null,
+      images: parseImagesArray(images) // array oggetti
     };
 
+    // Se è stato caricato un file singolo come cover
     if (req.file) doc.image = `/uploads/projects/${req.file.filename}`;
+    // Se non c'è cover ma c'è galleria, usa la prima come cover
+    if (!doc.image && doc.images.length) doc.image = doc.images[0].url;
 
     const project = await Project.create(doc);
     const item = sanitizeProject(project);
@@ -332,7 +403,6 @@ export const createProject = async (req, res) => {
       message: MESSAGES.PROJECT.CREATED,
       data: { project: item },
       code: 'PROJECT_CREATED',
-      // compat
       item
     });
   } catch (error) {
@@ -368,7 +438,8 @@ export const updateProject = async (req, res) => {
       liveDemo,
       featured,
       status,
-      slug
+      slug,
+      images // <— supporto galleria dal body
     } = req.body || {};
 
     if (!title?.trim() || !description?.trim()) {
@@ -393,20 +464,32 @@ export const updateProject = async (req, res) => {
       liveDemo: safeStr(liveDemo, 500) || '',
     };
 
+    // featured
     const f = parseBool(featured);
     if (typeof f === 'boolean') payload.featured = f;
 
+    // slug
     if (slug) payload.slug = safeStr(slug, 120).toLowerCase();
 
+    // status
     if (status && ['draft', 'published', 'archived', 'active', 'inactive'].includes(status)) {
       const normalized = (status === 'active') ? 'published' : (status === 'inactive') ? 'draft' : status;
       payload.status = normalized;
       if (normalized === 'published' && !existing.publishedAt) payload.publishedAt = new Date();
     }
 
+    // cover caricata (singolo file)
     if (req.file) {
       if (existing.image) await deleteOldImage(existing.image);
       payload.image = `/uploads/projects/${req.file.filename}`;
+    }
+
+    // galleria dal body (sostituzione intera)
+    const parsedImages = parseImagesArray(images);
+    if (Array.isArray(parsedImages)) {
+      payload.images = parsedImages;
+      // se non c'è cover esplicita, usa prima dell’array
+      if (!payload.image && parsedImages.length) payload.image = parsedImages[0].url;
     }
 
     const updated = await Project.findOneAndUpdate(filter, payload, { new: true, runValidators: true });
@@ -441,7 +524,15 @@ export const deleteProject = async (req, res) => {
       return res.status(404).json({ success: false, message: MESSAGES.PROJECT.NOT_FOUND, code: 'PROJECT_NOT_FOUND' });
     }
 
+    // elimina cover legacy
     if (project.image) await deleteOldImage(project.image);
+    // elimina galleria
+    if (Array.isArray(project.images)) {
+      for (const img of project.images) {
+        const url = typeof img === 'string' ? img : img?.url;
+        if (url) await deleteOldImage(url);
+      }
+    }
 
     return res.json({ success: true, message: MESSAGES.PROJECT.DELETED, code: 'PROJECT_DELETED' });
   } catch (error) {
