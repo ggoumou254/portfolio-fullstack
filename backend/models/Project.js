@@ -1,3 +1,4 @@
+// backend/models/project.js
 import mongoose from 'mongoose';
 import fs from 'fs/promises';
 import path from 'path';
@@ -99,12 +100,15 @@ const projectSchema = new mongoose.Schema(
       default: null
     },
 
+    // cover opzionale legacy (stringa)
     image: {
       type: String,
       trim: true,
       maxlength: [VALIDATION.IMAGE.MAX_LENGTH, `Le chemin de l'image ne peut pas dépasser ${VALIDATION.IMAGE.MAX_LENGTH} caractères`],
       default: null
     },
+
+    // galleria immagini (oggetti con url/alt/caption/order)
     images: [{
       url: { type: String, trim: true, required: true },
       alt: { type: String, trim: true, maxlength: 100, default: '' },
@@ -285,11 +289,22 @@ projectSchema.pre('save', function (next) {
   next();
 });
 
+/* =========================
+   File cleanup robusto
+========================= */
+const ROOT = process.cwd();
+const toFsPath = (u) => {
+  // accetta "/uploads/..." o "uploads/..."
+  const rel = String(u || '').replace(/^\/+/, '');
+  return path.join(ROOT, rel);
+};
+
 async function cleanupFiles(doc) {
   if (!doc) return;
 
+  // cover legacy (stringa)
   if (doc.image) {
-    const p = path.join(__dirname, '../../', doc.image);
+    const p = toFsPath(doc.image);
     try {
       await fs.unlink(p);
       console.log(`🗑️ Deleted project image: ${doc.image}`);
@@ -298,15 +313,17 @@ async function cleanupFiles(doc) {
     }
   }
 
+  // galleria immagini (oggetti con url)
   if (Array.isArray(doc.images)) {
     for (const img of doc.images) {
-      if (!img?.url) continue;
-      const p = path.join(__dirname, '../../', img.url);
+      const url = typeof img === 'string' ? img : img?.url;
+      if (!url) continue;
+      const p = toFsPath(url);
       try {
         await fs.unlink(p);
-        console.log(`🗑️ Deleted project additional image: ${img.url}`);
+        console.log(`🗑️ Deleted project additional image: ${url}`);
       } catch (err) {
-        if (err.code !== 'ENOENT') console.warn(`⚠️ Could not delete project image ${img.url}:`, err.message);
+        if (err.code !== 'ENOENT') console.warn(`⚠️ Could not delete project image ${url}:`, err.message);
       }
     }
   }
