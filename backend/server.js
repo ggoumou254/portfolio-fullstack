@@ -38,6 +38,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = process.cwd(); // root progetto (coerente con uploadRoutes)
 
+// === Upload constants & helpers (riusabili nelle routes) === 
+const UPLOAD_ROOT = path.join(ROOT, 'uploads');
+const PROJECTS_DIR = path.join(UPLOAD_ROOT, 'projects');
+fs.mkdirSync(UPLOAD_ROOT, { recursive: true });
+fs.mkdirSync(PROJECTS_DIR, { recursive: true });
+
+// Rende disponibili i path alle routes (req.app.locals.*)
+app.locals.UPLOAD_ROOT = UPLOAD_ROOT;
+app.locals.PROJECTS_DIR = PROJECTS_DIR;
+
+// Crea sempre URL web (NON path filesystem)
+app.locals.buildUploadUrl = (subdir, filename) => `/uploads/${subdir}/${filename}`;
+
 // In hosting dietro proxy (HTTPS/X-Forwarded-Proto)
 app.set('trust proxy', 1);
 
