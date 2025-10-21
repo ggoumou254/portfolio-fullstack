@@ -54,7 +54,6 @@ const uploadDir = path.join(uploadRoot, 'projects');
 
 const ensureUploadDir = async () => {
   try {
-    // crea /uploads e /uploads/projects se mancano
     await fs.mkdir(uploadRoot, { recursive: true });
     await fs.mkdir(uploadDir, { recursive: true });
   } catch (e) {
@@ -143,6 +142,45 @@ const adminLimiter = rateLimit({
 });
 
 /* =========================
+   Helpers locali
+========================= */
+const isUrlish = (s) => typeof s === 'string' && /^(\/?uploads\/|https?:\/\/)/i.test(s.trim());
+
+/** Parser leggero per la rotta admin rapida (non duplica la logica del controller) */
+const parseImagesLoose = (images) => {
+  if (!images) return [];
+  let arr = images;
+
+  if (typeof images === 'string') {
+    const s = images.trim();
+    try { arr = JSON.parse(s); }
+    catch { arr = s.split(',').map(x => x.trim()).filter(Boolean); }
+  }
+
+  if (!Array.isArray(arr)) return [];
+
+  return arr
+    .map((it, i) => {
+      if (typeof it === 'string' && isUrlish(it)) {
+        const url = it.startsWith('/') ? it : `/${it}`;
+        return { url, alt: '', caption: '', order: i };
+      }
+      if (it && typeof it === 'object' && isUrlish(it.url)) {
+        const url = it.url.startsWith('/') ? it.url : `/${it.url}`;
+        return {
+          url,
+          alt: typeof it.alt === 'string' ? it.alt : '',
+          caption: typeof it.caption === 'string' ? it.caption : '',
+          order: Number.isFinite(it.order) ? it.order : i
+        };
+      }
+      return null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+};
+
+/* =========================
    Normalizzazione body
 ========================= */
 const normalizeProjectBody = (req, _res, next) => {
@@ -174,10 +212,10 @@ const normalizeProjectBody = (req, _res, next) => {
   if (!b.status || b.status === '') b.status = 'published';
 
   if (req.file && !b.image) {
-    // salva path pubblico coerente con app.use('/uploads', express.static(...))
     b.image = `/uploads/projects/${req.file.filename}`;
   }
 
+  // Non tocchiamo b.images qui: il controller accetta sia array che stringa JSON/CSV
   req.body = b;
   next();
 };
@@ -188,22 +226,18 @@ const normalizeProjectBody = (req, _res, next) => {
 const normalizeProjectQuery = (req, res, next) => {
   const q = { ...(req.query || {}) };
 
-  // featured -> boolean
   if (typeof q.featured === 'string') {
     q.featured = ['true', '1', 'yes', 'on'].includes(q.featured.toLowerCase());
   }
 
-  // page -> int ≥ 1
   if (typeof q.page === 'string') {
     const p = Number.parseInt(q.page, 10);
     if (Number.isFinite(p) && p >= 1) q.page = String(p);
     else delete q.page;
   }
 
-  // sort default
   if (!q.sort) q.sort = '-createdAt';
 
-  // clamp limit [1..100]
   if (typeof q.limit === 'string') {
     const n = Number.parseInt(q.limit, 10);
     if (Number.isFinite(n)) {
@@ -218,7 +252,6 @@ const normalizeProjectQuery = (req, res, next) => {
     }
   }
 
-  // ❗ In Express 5 req.query è un getter: non riassegnare
   Object.assign(req.query, q);
   next();
 };
@@ -239,6 +272,31 @@ const validate = (req, res, next) => {
 
 const ALLOWED_STATUS = ['draft', 'published', 'archived', 'active', 'inactive'];
 
+const imagesValidator = body('images').optional().custom((value) => {
+  // accetta:
+  // - array di stringhe url-ish
+  // - array di oggetti con {url}
+  // - stringa JSON o CSV
+  const checkArray = (arr) =>
+    Array.isArray(arr) && arr.every(it =>
+      (typeof it === 'string' && isUrlish(it)) ||
+      (it && typeof it === 'object' && isUrlish(it.url))
+    );
+
+  if (Array.isArray(value)) return checkArray(value);
+  if (typeof value === 'string') {
+    const s = value.trim();
+    if (!s) return true;
+    if (s.startsWith('[')) {
+      try { return checkArray(JSON.parse(s)); }
+      catch { return false; }
+    }
+    // CSV
+    return s.split(',').every(x => isUrlish(x.trim()));
+  }
+  return false;
+}).withMessage('Il campo "images" deve essere un array di URL/oggetti o una stringa JSON/CSV valida');
+
 const projectValidation = [
   body('title').trim().isLength({ min: 3, max: 100 }).withMessage('Il titolo deve contenere tra 3 e 100 caratteri'),
   body('description').trim().isLength({ min: 10, max: 2000 }).withMessage('La descrizione deve contenere tra 10 e 2000 caratteri'),
@@ -247,6 +305,7 @@ const projectValidation = [
     if (typeof value === 'string') return value.split(',').every(tech => tech.trim().length > 0);
     return false;
   }).withMessage('Le tecnologie devono essere un array o una stringa separata da virgole'),
+  imagesValidator,
   body('github').optional().isURL().withMessage('Il link GitHub deve essere un URL valido'),
   body('liveDemo').optional().isURL().withMessage('Il link Demo deve essere un URL valido'),
   body('featured').optional().isBoolean().withMessage('Il campo "featured" deve essere booleano'),
@@ -261,6 +320,7 @@ const updateProjectValidation = [
     if (typeof value === 'string') return value.split(',').every(tech => tech.trim().length > 0);
     return false;
   }).withMessage('Le tecnologie devono essere un array o una stringa separata da virgole'),
+  imagesValidator,
   body('github').optional().isURL().withMessage('Il link GitHub deve essere un URL valido'),
   body('liveDemo').optional().isURL().withMessage('Il link Demo deve essere un URL valido'),
   body('featured').optional().isBoolean().withMessage('Il campo "featured" deve essere booleano'),
@@ -282,7 +342,7 @@ const queryValidation = [
 // LIST pubblica (normalize PRIMA dei validator)
 router.get('/', publicLimiter, normalizeProjectQuery, queryValidation, validate, listProjects);
 
-// Featured: riusa normalize + validators + controller
+// Featured (subset published)
 router.get(
   '/featured',
   publicLimiter,
@@ -299,7 +359,7 @@ router.get(
   listProjects
 );
 
-// Admin: pubblica tutti (utility)
+// Admin: utility pubblica tutti
 router.post('/publish-all', verifyToken, requireAdmin, async (_req, res) => {
   try {
     const result = await Project.updateMany({}, { $set: { status: 'published' } });
@@ -345,7 +405,10 @@ router.get('/admin/all', verifyToken, requireAdmin, async (_req, res) => {
   }
 });
 
-// Admin: creazione rapida con upload integrato
+/* =========================
+   Admin: creazione rapida con upload integrato
+   NB: Per galleria preferisci /api/upload/project-images e poi manda body.images
+========================= */
 router.post('/admin', verifyToken, requireAdmin, uploadImage, async (req, res) => {
   try {
     const {
@@ -356,7 +419,8 @@ router.post('/admin', verifyToken, requireAdmin, uploadImage, async (req, res) =
       technologies,
       github,
       demo,
-      featured
+      featured,
+      images // può arrivare array, JSON, CSV
     } = req.body;
 
     let techs = [];
@@ -369,6 +433,9 @@ router.post('/admin', verifyToken, requireAdmin, uploadImage, async (req, res) =
     if (req.file) image = `/uploads/projects/${req.file.filename}`;
     if (!image && req.body.imageUrl) image = String(req.body.imageUrl);
 
+    const gallery = parseImagesLoose(images);
+    if (!image && gallery.length) image = gallery[0].url;
+
     const project = await Project.create({
       title,
       description,
@@ -378,7 +445,8 @@ router.post('/admin', verifyToken, requireAdmin, uploadImage, async (req, res) =
       github,
       liveDemo: demo || undefined,
       featured: featured === '1' || featured === 'true' || featured === true,
-      image
+      image,
+      images: gallery
     });
 
     return res.json({ success: true, data: { project }, message: 'Progetto creato', code: 'PROJECT_CREATED' });
@@ -391,7 +459,7 @@ router.post('/admin', verifyToken, requireAdmin, uploadImage, async (req, res) =
 // GET singolo pubblico (id o slug)
 router.get('/:idOrSlug', publicLimiter, getProject);
 
-// CREATE (admin)
+// CREATE (admin) → usa controller (con images support)
 router.post(
   '/',
   verifyToken,
@@ -404,7 +472,7 @@ router.post(
   createProject
 );
 
-// UPDATE (admin)
+// UPDATE (admin) → usa controller (con images support)
 router.put(
   '/:idOrSlug',
   verifyToken,
@@ -426,7 +494,7 @@ router.patch(
   verifyToken,
   requireAdmin,
   adminLimiter,
-  [body('status').isIn(ALLOWED_STATUS).withMessage(`Lo status deve essere uno tra: ${ALLOWED_STATUS.join(', ')}`)],
+  [body('status').isIn(['draft', 'published', 'archived', 'active', 'inactive']).withMessage('Status non valido')],
   normalizeProjectBody,
   validate,
   async (req, res) => {
