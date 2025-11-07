@@ -1,3 +1,4 @@
+// backend/routes/contactRoutes.js
 import { Router } from 'express';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { body, param, validationResult } from 'express-validator';
@@ -12,11 +13,12 @@ import {
   getContactStats
 } from '../controllers/contactController.js';
 import { verifyToken, requireAdmin, requireRole } from '../middleware/authMiddleware.js';
+import { verifySmtp } from '../nodemailer.config.js';
 
 const router = Router();
 
 /* =========================================
-   Utils: sanitizzazione + validator helper
+   Utils
 ========================================= */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -36,14 +38,14 @@ const validate = (req, res, next) => {
 };
 
 /* =========================================
-   Rate limits (IPv6-safe key using ipKeyGenerator)
+   Rate limits
 ========================================= */
 const keyUA = (req) =>
   `${ipKeyGenerator(req)}|${(req.headers['user-agent'] || '').slice(0, 200)}`;
 
 const contactLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 3,
+  max: 5,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: keyUA,
@@ -90,13 +92,11 @@ const contactValidation = [
     .isLength({ min: 10, max: 5000 })
     .withMessage('Le message doit contenir entre 10 et 5000 caractères'),
 
-  // honeypot (doit rester vide)
   body('website')
     .optional({ checkFalsy: true })
     .isEmpty()
     .withMessage('Bot détecté'),
 
-  // timing opzionale
   body('startedAt')
     .optional({ checkFalsy: true })
     .isNumeric()
@@ -104,196 +104,61 @@ const contactValidation = [
 ];
 
 /* =========================================
-   Anti-bot timing middleware
+   Timing anti-bot
 ========================================= */
 const timingGuard = (req, res, next) => {
   const raw = req.body?.startedAt;
-  if (raw === undefined || raw === null || raw === '') return next(); // opzionale
+  if (!raw) return next();
   const startedAt = Number(raw);
   if (!Number.isFinite(startedAt)) {
-    return res.status(400).json({
-      success: false,
-      message: 'startedAt non valide',
-      code: 'BOT_TIMING_BLOCK'
-    });
+    return res.status(400).json({ success: false, code: 'BOT_TIMING_BLOCK', message: 'startedAt non valide' });
   }
   const elapsed = Date.now() - startedAt;
   if (elapsed < 2000 || elapsed > 30 * 60 * 1000) {
-    return res.status(400).json({
-      success: false,
-      message: 'Envoi non valide (timing)',
-      code: 'BOT_TIMING_BLOCK'
-    });
+    return res.status(400).json({ success: false, code: 'BOT_TIMING_BLOCK', message: 'Envoi non valide (timing)' });
   }
   return next();
+};
+
+/* =========================================
+   Normalizzazione (subject default)
+========================================= */
+const normalizeContactBody = (req, _res, next) => {
+  const b = req.body || {};
+  if (!b.subject || String(b.subject).trim().length < 3) {
+    b.subject = 'Nouveau message du portfolio';
+  }
+  if (b.name) b.name = String(b.name).trim();
+  if (b.email) b.email = String(b.email).trim();
+  req.body = b;
+  next();
 };
 
 /* =========================================
    ROUTES
 ========================================= */
 
-// POST /api/contact
-router.post('/', contactLimiter, contactValidation, validate, timingGuard, sendMessage);
+// Preflight CORS
+router.options('/', (_req, res) => res.sendStatus(200));
 
-// GET /api/contact
-router.get('/', verifyToken, requireRole(['admin', 'moderator']), adminLimiter, getMessages);
+// Invio messaggio
+router.post('/', contactLimiter, contactValidation, validate, timingGuard, normalizeContactBody, sendMessage);
 
-// GET /api/contact/stats
-router.get('/stats', verifyToken, requireRole(['admin', 'moderator']), getContactStats);
-
-// GET /api/contact/:id
-router.get(
-  '/:id',
-  verifyToken,
-  requireRole(['admin', 'moderator']),
-  param('id').isMongoId().withMessage('ID non valido'),
-  validate,
-  getMessageById
-);
-
-// PATCH /api/contact/:id/read
-router.patch(
-  '/:id/read',
-  verifyToken,
-  requireRole(['admin', 'moderator']),
-  [
-    param('id').isMongoId().withMessage('ID non valido'),
-    body('isRead').optional().isBoolean().withMessage('Le champ isRead doit être un booléen')
-  ],
-  validate,
-  markAsRead
-);
-
-// DELETE /api/contact/:id
-router.delete(
-  '/:id',
-  verifyToken,
-  requireAdmin,
-  param('id').isMongoId().withMessage('ID non valido'),
-  validate,
-  deleteMessage
-);
-
-// GET /api/contact/export/csv
-router.get('/export/csv', verifyToken, requireAdmin, async (req, res) => {
+// Health SMTP
+router.get('/health', async (_req, res) => {
   try {
-    const { startDate, endDate, status } = req.query;
-
-    const filter = {};
-    if (status) filter.status = status;
-    if (startDate || endDate) {
-      filter.createdAt = {};
-      if (startDate) filter.createdAt.$gte = new Date(startDate);
-      if (endDate) filter.createdAt.$lte = new Date(endDate);
-    }
-
-    const contacts = await Contact.find(filter).sort({ createdAt: -1 }).lean();
-
-    const bom = '\uFEFF';
-    const headers = ['Nom', 'Email', 'Sujet', 'Message', 'Statut', 'Lu', 'Date'];
-    const esc = (v) => (`${v ?? ''}`).replace(/"/g, '""').replace(/\r?\n/g, ' ').trim();
-
-    const rows = contacts.map(c => [
-      esc(c.name),
-      esc(c.email),
-      esc(c.subject || ''),
-      esc(c.message),
-      esc(c.status || ''),
-      c.isRead ? 'Oui' : 'Non',
-      c.createdAt ? new Date(c.createdAt).toISOString() : ''
-    ]);
-
-    const csv = bom + headers.join(',') + '\n' + rows.map(r => r.map(x => `"${x}"`).join(',')).join('\n');
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename=contacts-${new Date().toISOString().slice(0,10)}.csv`);
-    return res.send(csv);
-  } catch (error) {
-    console.error('❌ Contact export error:', {
-      message: error.message,
-      adminId: req.user?.id,
-      stack: error.stack
-    });
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors de l'export des contacts",
-      code: 'EXPORT_ERROR'
-    });
+    await verifySmtp();
+    return res.json({ ok: true });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e?.message || 'smtp verify failed' });
   }
 });
 
-// POST /api/contact/bulk/read
-router.post(
-  '/bulk/read',
-  verifyToken,
-  requireRole(['admin', 'moderator']),
-  [
-    body('messageIds').isArray({ min: 1 }).withMessage('messageIds doit être un tableau non vide'),
-    body('messageIds.*').isMongoId().withMessage('Chaque ID doit être un ID MongoDB valide'),
-    body('isRead').isBoolean().withMessage('isRead doit être un booléen')
-  ],
-  validate,
-  async (req, res) => {
-    try {
-      const { messageIds, isRead } = req.body;
-      const result = await Contact.updateMany(
-        { _id: { $in: messageIds } },
-        { isRead, status: isRead ? 'read' : 'new' }
-      );
-      return res.json({
-        success: true,
-        message: `${result.modifiedCount} messages marqués comme ${isRead ? 'lus' : 'non lus'}`,
-        data: { modifiedCount: result.modifiedCount },
-        code: 'BULK_UPDATE_SUCCESS'
-      });
-    } catch (error) {
-      console.error('❌ Bulk read update error:', {
-        message: error.message,
-        adminId: req.user?.id,
-        stack: error.stack
-      });
-      return res.status(500).json({
-        success: false,
-        message: 'Erreur lors de la mise à jour en lot',
-        code: 'BULK_UPDATE_ERROR'
-      });
-    }
-  }
-);
-
-// POST /api/contact/bulk/delete
-router.post(
-  '/bulk/delete',
-  verifyToken,
-  requireAdmin,
-  [
-    body('messageIds').isArray({ min: 1 }).withMessage('messageIds doit être un tableau non vide'),
-    body('messageIds.*').isMongoId().withMessage('Chaque ID doit être un ID MongoDB valide')
-  ],
-  validate,
-  async (req, res) => {
-    try {
-      const { messageIds } = req.body;
-      const result = await Contact.deleteMany({ _id: { $in: messageIds } });
-      return res.json({
-        success: true,
-        message: `${result.deletedCount} messages supprimés`,
-        data: { deletedCount: result.deletedCount },
-        code: 'BULK_DELETE_SUCCESS'
-      });
-    } catch (error) {
-      console.error('❌ Bulk delete error:', {
-        message: error.message,
-        adminId: req.user?.id,
-        stack: error.stack
-      });
-      return res.status(500).json({
-        success: false,
-        message: 'Erreur lors de la suppression en lot',
-        code: 'BULK_DELETE_ERROR'
-      });
-    }
-  }
-);
+// Admin routes
+router.get('/', verifyToken, requireRole(['admin', 'moderator']), adminLimiter, getMessages);
+router.get('/stats', verifyToken, requireRole(['admin', 'moderator']), getContactStats);
+router.get('/:id', verifyToken, requireRole(['admin', 'moderator']), param('id').isMongoId(), validate, getMessageById);
+router.patch('/:id/read', verifyToken, requireRole(['admin', 'moderator']), param('id').isMongoId(), validate, markAsRead);
+router.delete('/:id', verifyToken, requireAdmin, param('id').isMongoId(), validate, deleteMessage);
 
 export default router;
