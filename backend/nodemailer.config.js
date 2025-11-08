@@ -1,4 +1,4 @@
-// backend/nodemailer.config.js
+// backend/nodemailer.config.js (ESM, SOLO SMTP Gmail 587 + MOCK in dev)
 import nodemailer from 'nodemailer';
 import fs from 'node:fs/promises';
 import 'dotenv/config';
@@ -11,25 +11,28 @@ const __dirname = path.dirname(__filename);
 // ====================
 // CONFIG
 // ====================
-const PORT = Number(process.env.SMTP_PORT || 587);
-const SECURE = (process.env.SMTP_SECURE === 'true') || PORT === 465;
+const ENV = process.env.NODE_ENV || 'development';
+
+const PORT = Number(process.env.SMTP_PORT || 587);        // 587 = STARTTLS
+const SECURE = (process.env.SMTP_SECURE === 'true') || PORT === 465; // true solo su 465
 
 const EMAIL_CONFIG = {
   SMTP: {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: PORT,
-    secure: SECURE, // true solo su 465 (TLS implicito), false su 587 (STARTTLS)
+    secure: SECURE, // false su 587 (STARTTLS), true su 465 (TLS implicito)
     auth: (process.env.SMTP_USER && process.env.SMTP_PASS)
       ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-      : undefined
+      : undefined,
   },
   DEFAULTS: {
     from:
+      process.env.MAIL_FROM ||
       process.env.EMAIL_FROM ||
       (process.env.SMTP_USER ? `"Portfolio" <${process.env.SMTP_USER}>` : undefined),
-    replyTo: process.env.SMTP_USER || undefined
+    replyTo: process.env.MAIL_REPLY_TO || process.env.SMTP_USER || undefined,
   },
-  ENV: process.env.NODE_ENV || 'development',
+  ENV,
   OUTDIR: process.env.EMAIL_OUTPUT_DIR || path.join(__dirname, '_emails'),
 };
 
@@ -41,9 +44,10 @@ const logger = {
 };
 
 function isSmtpConfigured() {
-  const ok = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
+  const ok = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
   if (!ok) {
     logger.warn('Config SMTP mancante', {
+      hostMissing: !process.env.SMTP_HOST,
       userMissing: !process.env.SMTP_USER,
       passMissing: !process.env.SMTP_PASS,
     });
@@ -52,9 +56,9 @@ function isSmtpConfigured() {
 }
 
 function sanitizeFileName(str = '') {
-  return str.toString()
+  return String(str)
     .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9-_]+/g, '-')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 80);
@@ -69,27 +73,28 @@ if (isSmtpConfigured()) {
   transporter = nodemailer.createTransport({
     host: EMAIL_CONFIG.SMTP.host,
     port: EMAIL_CONFIG.SMTP.port,
-    secure: EMAIL_CONFIG.SMTP.secure,
+    secure: EMAIL_CONFIG.SMTP.secure, // false su 587
     auth: EMAIL_CONFIG.SMTP.auth,
     pool: true,
-    maxConnections: 3,
-    maxMessages: 100,
+    maxConnections: 2,
+    maxMessages: 50,
     connectionTimeout: 15000,
     greetingTimeout: 7000,
     socketTimeout: 20000,
-    family: 4,
+    // niente `family: 4` (evita warning DNS su alcuni hosting)
     tls: {
       minVersion: 'TLSv1.2',
       servername: EMAIL_CONFIG.SMTP.host,
-      // Se necessario per debug reti intermedie:
+      // Per debug reti intermedie (NON in prod):
       // rejectUnauthorized: false,
     },
   });
 } else if (EMAIL_CONFIG.ENV === 'development') {
-  // Mock in DEV: salva su disco
+  // Mock in DEV: salva su disco (come avevi già)
   logger.warn('Usando fallback email MOCK (dev): salvataggio file in _emails/');
   transporter = {
-    sendMail: async (opts) => {
+    async verify() { return true; },
+    async sendMail(opts) {
       await fs.mkdir(EMAIL_CONFIG.OUTDIR, { recursive: true });
       const ts = new Date().toISOString().replace(/[:.]/g, '');
       const base = `${ts}-${sanitizeFileName(opts.subject || 'no-subject')}`;
@@ -114,13 +119,13 @@ if (isSmtpConfigured()) {
   };
 }
 
-// Verifica non-bloccante in PROD (solo logging)
-async function verifySmtp() {
+// Verifica non-bloccante (solo logging)
+export async function verifySmtp() {
   if (!transporter || !transporter.verify) {
-    return { ok: false, error: 'SMTP non configurato' };
+    return { ok: false, error: 'SMTP non configurato o in MOCK' };
   }
   try {
-    await transporter.verify();
+    await transporter.verify(); // su 587 avvia STARTTLS se richiesto
     logger.success('SMTP verificato', {
       host: EMAIL_CONFIG.SMTP.host,
       port: EMAIL_CONFIG.SMTP.port,
@@ -137,7 +142,7 @@ async function verifySmtp() {
 // INVIO
 // ====================
 export async function sendMail({ to, subject, html, text }) {
-  if (!transporter) throw new Error('SMTP non configurato');
+  if (!transporter) throw new Error('SMTP non configurato (o no MOCK in prod).');
   if (!to) throw new Error('Campo "to" mancante');
   if (!subject) throw new Error('Campo "subject" mancante');
   if (!html && !text) throw new Error('Serve "html" o "text"');
@@ -162,7 +167,7 @@ export async function sendMail({ to, subject, html, text }) {
 // ====================
 export function getEmailStatus() {
   return {
-    configured: isSmtpConfigured(),
+    configured: !!(transporter && EMAIL_CONFIG.SMTP.auth),
     env: EMAIL_CONFIG.ENV,
     smtp: {
       host: EMAIL_CONFIG.SMTP.host,
@@ -170,8 +175,12 @@ export function getEmailStatus() {
       secure: EMAIL_CONFIG.SMTP.secure,
       user: EMAIL_CONFIG.SMTP.auth?.user ? `${EMAIL_CONFIG.SMTP.auth.user.slice(0, 3)}...` : 'non configurato',
     },
+    defaults: {
+      from: EMAIL_CONFIG.DEFAULTS.from || '—',
+      replyTo: EMAIL_CONFIG.DEFAULTS.replyTo || '—',
+    },
     outputDir: EMAIL_CONFIG.OUTDIR,
   };
 }
 
-export { transporter, verifySmtp };
+export { transporter };
