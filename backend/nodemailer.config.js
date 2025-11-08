@@ -8,62 +8,59 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/* ==============================
-   CONFIGURAZIONE E DEFAULTS
-============================== */
+// ---------- PARAMETRI ENV ----------
 const PORT = Number(process.env.SMTP_PORT || 587);
-// secure=true solo su 465 (TLS implicito) oppure se forzato via env
+// secure=true solo se porta 465 o se forzato via env
 const SECURE = (process.env.SMTP_SECURE === 'true') || PORT === 465;
 
 const EMAIL_CONFIG = {
   SMTP: {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: PORT,
-    secure: SECURE,
+    secure: SECURE, // 465 -> true (TLS implicito), 587 -> false (STARTTLS)
     auth: (process.env.SMTP_USER && process.env.SMTP_PASS)
       ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
       : undefined,
   },
   DEFAULTS: {
+    // Preferisci EMAIL_FROM (nome+indirizzo). Se assente, fallback su SMTP_USER.
     from:
       process.env.EMAIL_FROM ||
       (process.env.SMTP_USER ? `"Portfolio" <${process.env.SMTP_USER}>` : undefined),
     replyTo: process.env.SMTP_USER || undefined,
+    // A chi recapitare i messaggi “Contact”
     contactReceiver:
       process.env.CONTACT_RECEIVER ||
-      process.env.TO_EMAIL ||
-      process.env.SMTP_USER || undefined,
+      process.env.TO_EMAIL || // compat vecchia
+      process.env.SMTP_USER,   // fallback finale
   },
   ENV: process.env.NODE_ENV || 'development',
   OUTDIR: process.env.EMAIL_OUTPUT_DIR || path.join(__dirname, '_emails'),
 };
 
-/* ==============================
-   LOGGER
-============================== */
+// ---------- LOGGER ----------
 const log = {
-  info: (m, d) => console.log(`[EMAIL] ℹ️ ${m}`, d || ''),
-  ok:   (m, d) => console.log(`[EMAIL] ✅ ${m}`, d || ''),
-  warn: (m, d) => console.warn(`[EMAIL] ⚠️ ${m}`, d || ''),
-  err:  (m, d) => console.error(`[EMAIL] ❌ ${m}`, d || ''),
+  info: (msg, data) => console.log(`[EMAIL] ℹ️ ${msg}`, data || ''),
+  ok:   (msg, data) => console.log(`[EMAIL] ✅ ${msg}`, data || ''),
+  warn: (msg, data) => console.warn(`[EMAIL] ⚠️ ${msg}`, data || ''),
+  err:  (msg, data) => console.error(`[EMAIL] ❌ ${msg}`, data || ''),
 };
 
-/* ==============================
-   UTILS
-============================== */
+// ---------- UTILS ----------
 function isSmtpConfigured() {
   const ok = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
   if (!ok) {
     log.warn('Config SMTP mancante', {
-      userMissing: !process.env.SMTP_USER,
-      passMissing: !process.env.SMTP_PASS,
+      SMTP_USER: !!process.env.SMTP_USER,
+      SMTP_PASS: !!process.env.SMTP_PASS,
     });
   }
   return ok;
 }
 
 function sanitizeFileName(str = '') {
-  return String(str)
+  return str
+    .toString()
     .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-zA-Z0-9-_]+/g, '-')
     .replace(/-+/g, '-')
@@ -71,16 +68,14 @@ function sanitizeFileName(str = '') {
     .slice(0, 80);
 }
 
-/* ==============================
-   CREAZIONE TRANSPORTER
-============================== */
+// ---------- TRANSPORTER ----------
 let transporter = null;
 
 if (isSmtpConfigured()) {
   transporter = nodemailer.createTransport({
     host: EMAIL_CONFIG.SMTP.host,
     port: EMAIL_CONFIG.SMTP.port,
-    secure: EMAIL_CONFIG.SMTP.secure, // 465=true, 587=false (STARTTLS)
+    secure: EMAIL_CONFIG.SMTP.secure,
     auth: EMAIL_CONFIG.SMTP.auth,
     pool: true,
     maxConnections: 3,
@@ -92,12 +87,12 @@ if (isSmtpConfigured()) {
     tls: {
       minVersion: 'TLSv1.2',
       servername: EMAIL_CONFIG.SMTP.host,
-      // NB: sbloccare SOLO per test su reti problematiche
+      // Se necessario per reti “strane”, sblocca TEMPORANEAMENTE:
       // rejectUnauthorized: false,
     },
   });
 
-  // Verifica non bloccante in prod, bloccante in dev
+  // Verifica non-bloccante in prod, esplicita in dev
   if (EMAIL_CONFIG.ENV === 'production') {
     transporter.verify()
       .then(() => log.ok('SMTP raggiungibile (prod)', {
@@ -112,11 +107,11 @@ if (isSmtpConfigured()) {
       });
     });
   }
-} else if (EMAIL_CONFIG.ENV === 'development') {
-  // Fallback: mock in DEV (scrive file su disco)
+} else if (EMAIL_CONFIG.ENV !== 'production') {
+  // MOCK in dev: salva file su disco
   log.warn('Usando fallback email MOCK (dev): salvataggio file in _emails/');
   transporter = {
-    async sendMail(opts) {
+    sendMail: async (opts) => {
       await fs.mkdir(EMAIL_CONFIG.OUTDIR, { recursive: true });
       const ts = new Date().toISOString().replace(/[:.]/g, '');
       const base = `${ts}-${sanitizeFileName(opts.subject || 'no-subject')}`;
@@ -134,15 +129,10 @@ if (isSmtpConfigured()) {
 
       await fs.writeFile(htmlPath, html, 'utf8');
       if (opts.text) await fs.writeFile(txtPath, opts.text, 'utf8');
-      await fs.writeFile(
-        metaPath,
-        JSON.stringify(
-          { to: opts.to, subject: opts.subject, createdAt: new Date().toISOString() },
-          null,
-          2
-        ),
-        'utf8'
-      );
+      await fs.writeFile(metaPath, JSON.stringify(
+        { to: opts.to, subject: opts.subject, createdAt: new Date().toISOString() },
+        null, 2
+      ), 'utf8');
 
       log.info('Email mock salvata', { htmlPath });
       return { messageId: `mock-${ts}`, files: { htmlPath, txtPath, metaPath } };
@@ -150,10 +140,8 @@ if (isSmtpConfigured()) {
   };
 }
 
-/* ==============================
-   API DI INVIO
-============================== */
-export async function sendMail({ to, subject, html, text, replyTo }) {
+// ---------- API PUBBLICHE ----------
+export async function sendMail({ to, subject, html, text }) {
   if (!transporter) throw new Error('SMTP non configurato');
   if (!to) throw new Error('Campo "to" mancante');
   if (!subject) throw new Error('Campo "subject" mancante');
@@ -161,7 +149,7 @@ export async function sendMail({ to, subject, html, text, replyTo }) {
 
   const opts = {
     from: EMAIL_CONFIG.DEFAULTS.from,
-    replyTo: replyTo || EMAIL_CONFIG.DEFAULTS.replyTo,
+    replyTo: EMAIL_CONFIG.DEFAULTS.replyTo,
     to,
     subject,
     html,
@@ -174,53 +162,60 @@ export async function sendMail({ to, subject, html, text, replyTo }) {
   return info;
 }
 
-/**
- * Helper dedicato per i messaggi del form Contatti.
- * Se non passi "to", usa CONTACT_RECEIVER/TO_EMAIL/SMTP_USER.
- */
-export async function sendContactEmail({ subject, html, text, replyTo }) {
-  const to = EMAIL_CONFIG.DEFAULTS.contactReceiver;
-  if (!to) throw new Error('CONTACT_RECEIVER/TO_EMAIL/SMTP_USER non configurato');
-  return sendMail({ to, subject, html, text, replyTo });
+// Helper: invio email “Contact”
+export async function sendContactEmail({ name, email, subject, message }) {
+  const dest = EMAIL_CONFIG.DEFAULTS.contactReceiver;
+  if (!dest) throw new Error('Nessun destinatario configurato per i messaggi di contatto');
+
+  const safeName = String(name || '').slice(0, 100);
+  const safeEmail = String(email || '').slice(0, 200);
+  const safeSubject = subject && subject.trim() ? subject.trim() : 'Nuovo messaggio dal Portfolio';
+
+  const html = `
+    <h2>📨 Nuovo messaggio dal Portfolio</h2>
+    <p><strong>Da:</strong> ${safeName} &lt;${safeEmail}&gt;</p>
+    <p><strong>Oggetto:</strong> ${safeSubject}</p>
+    <hr />
+    <pre style="white-space:pre-wrap;font-family:inherit">${message || ''}</pre>
+  `;
+  const text =
+    `Nuovo messaggio dal Portfolio\n` +
+    `Da: ${safeName} <${safeEmail}>\n` +
+    `Oggetto: ${safeSubject}\n\n` +
+    `${message || ''}`;
+
+  return sendMail({ to: dest, subject: `📮 [Contact] ${safeSubject}`, html, text });
 }
 
-/* ==============================
-   STATO E VERIFICA
-============================== */
+// Stato per /_dev o health
 export function getEmailStatus() {
   return {
-    configured: !!transporter,
+    configured: isSmtpConfigured(),
     env: EMAIL_CONFIG.ENV,
     smtp: {
       host: EMAIL_CONFIG.SMTP.host,
       port: EMAIL_CONFIG.SMTP.port,
       secure: EMAIL_CONFIG.SMTP.secure,
-      user: EMAIL_CONFIG.SMTP.auth?.user
-        ? `${EMAIL_CONFIG.SMTP.auth.user.slice(0, 3)}...`
-        : 'non configurato',
+      user: EMAIL_CONFIG.SMTP.auth?.user ? `${EMAIL_CONFIG.SMTP.auth.user.slice(0, 3)}…` : 'non configurato',
     },
     defaults: {
       from: EMAIL_CONFIG.DEFAULTS.from || 'non configurato',
-      replyTo: EMAIL_CONFIG.DEFAULTS.replyTo || 'non configurato',
       contactReceiver: EMAIL_CONFIG.DEFAULTS.contactReceiver || 'non configurato',
     },
     outputDir: EMAIL_CONFIG.OUTDIR,
   };
 }
 
-/**
- * Esporta una verifySmtp usabile dalle routes (fix per l’errore):
- *  - ritorna { ok: boolean, message?: string }
- */
+// ✅ Funzione richiesta da contactRoutes.js
 export async function verifySmtp() {
   if (!transporter) {
-    return { ok: false, message: 'SMTP non configurato (transporter nullo)' };
+    return { ok: false, reason: 'SMTP non configurato' };
   }
   try {
     await transporter.verify();
     return { ok: true };
-  } catch (err) {
-    return { ok: false, message: err?.message || String(err) };
+  } catch (e) {
+    return { ok: false, reason: e?.message || 'verify failed' };
   }
 }
 
