@@ -1,32 +1,20 @@
 /**
- * Pagina Home – progetti in evidenza + counters
- * @version 2.5.0 (IT)
+ * Pagina Home
+ * @version 2.6.0
  */
 import { CONFIG } from './config.js';
 import { showNotification, truncate, formatNumber } from './utils.js';
 
-const homeState = {
-  featuredProjects: [],
-  stats: null,
-  isLoading: false,
-};
+const API_BASE = () => CONFIG.get('API_BASE') || window.__API_BASE__ || 'http://localhost:5000';
 
+const homeState = { featuredProjects: [], stats: null, isLoading: false };
 let domElements = {};
 
-/* -------- helper: estrai messaggio d'errore dall'API -------- */
 async function parseServerError(res, fallback = '') {
   try {
     const j = await res.json();
-    if (j?.message) return j.message;
-    if (j?.error) return j.error;
-    if (Array.isArray(j?.errors)) {
-      const msg = j.errors.map(e => e.msg || e.message).filter(Boolean).join(', ');
-      if (msg) return msg;
-    }
-    return fallback || `${res.status} ${res.statusText}`;
-  } catch {
-    return fallback || `${res.status} ${res.statusText}`;
-  }
+    return j?.message || j?.error || fallback || `${res.status} ${res.statusText}`;
+  } catch { return fallback || `${res.status} ${res.statusText}`; }
 }
 
 export async function initHome() {
@@ -34,7 +22,7 @@ export async function initHome() {
     setupDOM();
     setupEvents();
     await loadFeaturedProjects();
-    await loadHomeStats(); // legge endpoints reali con fallback “morbidi”
+    await loadHomeStats();
     setupAnimations();
   } catch (err) {
     console.error('HOME init error:', err);
@@ -44,36 +32,25 @@ export async function initHome() {
 
 function setupDOM() {
   domElements = {
-    // hero
     heroTitle: document.getElementById('hero-title'),
     heroSubtitle: document.getElementById('hero-subtitle'),
     heroCta: document.getElementById('hero-cta'),
-    // projects
     projectsContainer: document.getElementById('home-projects'),
     projectsLoading: document.getElementById('home-projects-loading'),
     projectsError: document.getElementById('home-projects-error'),
     projectsErrorMsg: document.getElementById('home-projects-error-message'),
     projectsEmpty: document.getElementById('home-projects-empty'),
-    // stats
     statsContainer: document.getElementById('home-stats'),
-    statsLoading: document.getElementById('home-stats-loading'),
   };
   showSkeletonProjects();
 }
 
 function setupEvents() {
-  domElements.heroCta?.addEventListener('click', () => { /* smooth scroll già gestito dal browser */ });
-
-  // Retry sul contenitore dell’errore (bottone “Riprova”)
-  domElements.projectsError?.addEventListener('click', (e) => {
-    const retry = e.target.closest('[data-action="retry-home-projects"]');
-    if (retry) loadFeaturedProjects(true);
+  domElements.projectsError?.addEventListener('click', e => {
+    if (e.target.closest('[data-action="retry-home-projects"]')) loadFeaturedProjects(true);
   });
 }
 
-/* ========================
-   Featured projects
-======================== */
 export async function loadFeaturedProjects(force = false) {
   if (homeState.isLoading && !force) return;
   homeState.isLoading = true;
@@ -83,42 +60,33 @@ export async function loadFeaturedProjects(force = false) {
 
   try {
     const base = CONFIG.apiUrl('api/projects');
-    const qs = new URLSearchParams({
-      featured: 'true',
-      status: 'published',
-      limit: '6',
-      sort: '-createdAt',
-    });
-    const url = `${base}?${qs.toString()}`;
-
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' },
-    });
-
-    if (!res.ok) {
-      const msg = await parseServerError(res);
-      throw new Error(msg);
-    }
+    const qs = new URLSearchParams({ featured: 'true', status: 'published', limit: '6', sort: '-createdAt' });
+    const res = await fetch(`${base}?${qs}`, { headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error(await parseServerError(res));
 
     const data = await res.json();
     let projects = [];
     if (Array.isArray(data)) projects = data;
+    else if (Array.isArray(data?.items)) projects = data.items;
     else if (Array.isArray(data?.data?.projects)) projects = data.data.projects;
     else if (Array.isArray(data?.projects)) projects = data.projects;
-    else if (Array.isArray(data?.items)) projects = data.items;
-    else throw new Error('Formato dati non valido');
 
     homeState.featuredProjects = projects.slice(0, 6).map(normalizeProject);
     renderFeaturedProjects();
   } catch (err) {
     console.error('HOME featured error:', err);
     showProjectsError(err.message || 'Errore di caricamento');
-    loadMockProjects(); // fallback demo
+    loadMockProjects();
   } finally {
     toggleProjectsLoading(false);
     homeState.isLoading = false;
   }
+}
+
+function fixImageUrl(raw) {
+  if (!raw) return null;
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+  return API_BASE().replace(/\/+$/, '') + '/' + raw.replace(/^\/+/, '');
 }
 
 function normalizeProject(p) {
@@ -131,7 +99,7 @@ function normalizeProject(p) {
     featured: !!p.featured,
     github: p.github || p.repository || null,
     demo: p.liveDemo || p.demo || p.url || null,
-    image: p.image || p.thumbnail || null,
+    image: fixImageUrl(p.image || p.thumbnail || null),
     createdAt: p.createdAt || null,
   };
 }
@@ -141,126 +109,81 @@ function renderFeaturedProjects() {
   if (!c) return;
 
   const items = homeState.featuredProjects;
-  if (!items.length) {
-    showProjectsEmpty();
-    c.innerHTML = '';
-    return;
-  }
+  if (!items.length) { showProjectsEmpty(); c.innerHTML = ''; return; }
 
-  c.innerHTML = items.map(project => `
-    <div class="col-md-6 col-lg-4 mb-4" data-project-id="${project.id}">
-      <article class="card project-card h-100 shadow-sm">
-        ${
-          project.image
-            ? `
-          <div class="project-image-container position-relative">
-            <img src="${project.image}" alt="${escapeHtml(project.title)}" class="card-img-top project-image" loading="lazy" onerror="this.style.display='none'"/>
-            ${project.featured ? `<div class="featured-badge"><i class="bi bi-star-fill"></i>In evidenza</div>` : ''}
-          </div>`
-            : `
-          <div class="card-img-top bg-light d-flex align-items-center justify-content-center text-muted" style="height:200px;">
-            <i class="bi bi-image display-4"></i>
-          </div>`
-        }
-        <div class="card-body d-flex flex-column">
-          <div class="project-header mb-2">
-            <h5 class="card-title project-title mb-1">${escapeHtml(project.title)}</h5>
-            <span class="badge bg-primary">${escapeHtml(project.category)}</span>
+  c.innerHTML = items.map(p => {
+    const title = escapeHtml(p.title);
+    const desc = escapeHtml(truncate(p.description, 120));
+    const cat = escapeHtml(p.category);
+
+    const img = p.image
+      ? `<div class="project-image-container position-relative">
+           <img src="${p.image}" alt="${title}" class="card-img-top project-image" loading="lazy"
+                onerror="this.style.display='none'">
+           ${p.featured ? '<div class="featured-badge"><i class="bi bi-star-fill"></i> In evidenza</div>' : ''}
+         </div>`
+      : `<div class="card-img-top bg-light d-flex align-items-center justify-content-center text-muted" style="height:200px">
+           <i class="bi bi-image display-4"></i>
+         </div>`;
+
+    return `
+      <div class="col-md-6 col-lg-4 mb-4">
+        <article class="card project-card h-100 shadow-sm">
+          ${img}
+          <div class="card-body d-flex flex-column">
+            <div class="mb-2">
+              <h5 class="card-title mb-1">${title}</h5>
+              <span class="badge bg-primary">${cat}</span>
+            </div>
+            <p class="card-text flex-grow-1 text-muted small">${desc}</p>
+            <div class="d-flex gap-2 mt-auto">
+              ${p.github ? `<a href="${p.github}" class="btn btn-sm btn-outline-dark flex-fill" target="_blank" rel="noopener"><i class="bi bi-github me-1"></i>Codice</a>` : ''}
+              ${p.demo
+        ? `<a href="${p.demo}" class="btn btn-sm btn-primary flex-fill" target="_blank" rel="noopener"><i class="bi bi-play-circle me-1"></i>Demo</a>`
+        : `<button class="btn btn-sm btn-outline-secondary flex-fill" disabled><i class="bi bi-info-circle me-1"></i>Dettagli</button>`}
+            </div>
           </div>
-          <p class="card-text project-description flex-grow-1">${escapeHtml(truncate(project.description, 120))}</p>
-          <div class="project-actions d-flex gap-2 mt-auto">
-            ${project.github ? `<a href="${project.github}" class="btn btn-sm btn-outline-dark flex-fill" target="_blank" rel="noopener noreferrer"><i class="bi bi-github me-1"></i>Codice</a>` : ''}
-            ${
-              project.demo
-                ? `<a href="${project.demo}" class="btn btn-sm btn-primary flex-fill" target="_blank" rel="noopener noreferrer"><i class="bi bi-play-circle me-1"></i>Demo</a>`
-                : `<button class="btn btn-sm btn-outline-secondary flex-fill" disabled><i class="bi bi-info-circle me-1"></i>Dettagli</button>`
-            }
-          </div>
-        </div>
-      </article>
-    </div>
-  `).join('');
+        </article>
+      </div>`;
+  }).join('');
 
   animateProjectsOnScroll();
 }
 
-/* ========================
-   Stats (contatori reali)
-======================== */
 async function loadHomeStats() {
-  let projects = null;
-  let clients = null;        // “Clienti soddisfatti” (reali se c’è endpoint)
-  let satisfaction = null;
-  const experience = new Date().getFullYear() - 2021; // aggiorna anno base se serve
+  let projects = null, clients = null, satisfaction = null;
+  const experience = new Date().getFullYear() - 2021;
 
-  // 1) endpoint leggero /api/stats/projects
   try {
-    const res1 = await fetch(CONFIG.apiUrl('api/stats/projects'), {
-      headers: { Accept: 'application/json' },
-    });
-    if (!res1.ok) {
-      const msg = await parseServerError(res1);
-      console.warn('Home stats fetch error:', msg);
-    } else {
-      const payload = await res1.json().catch(() => ({}));
-      projects =
-        payload?.data?.projectsCount ??
-        payload?.projectsCount ??
-        (Array.isArray(payload?.data?.projects) ? payload.data.projects.length : null);
-
-      const dist =
-        payload?.data?.reviews?.ratingDistribution || payload?.reviews?.ratingDistribution;
-      if (dist) {
-        const tot = Object.values(dist).reduce((a, b) => a + b, 0);
-        if (tot > 0) {
-          const positive = (dist[4] || 0) + (dist[5] || 0);
-          satisfaction = Math.round((positive / tot) * 100);
-          if (clients == null) clients = tot;
-        }
-      } else {
-        const avg =
-          parseFloat(payload?.data?.reviews?.averageRating || payload?.reviews?.averageRating) || 0;
-        if (avg > 0) satisfaction = Math.min(100, Math.round((avg / 5) * 100));
-      }
+    const res = await fetch(CONFIG.apiUrl('api/stats/projects'), { headers: { Accept: 'application/json' } });
+    if (res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      projects = payload?.data?.projectsCount ?? payload?.projectsCount ?? null;
     }
-  } catch (e) {
-    console.warn('Home stats fetch exception:', e?.message || e);
-  }
+  } catch (e) { console.warn('Home stats error:', e?.message); }
 
-  // 2) numero recensioni approvate = proxy “clienti soddisfatti”
-  if (clients == null) {
-    try { clients = await fetchApprovedReviewsCount(); }
-    catch (e) { console.warn('Reviews count exception:', e?.message || e); }
-  }
+  try {
+    const res = await fetch(CONFIG.apiUrl('api/reviews?status=approved&limit=1&countOnly=1'), { headers: { Accept: 'application/json' } });
+    if (res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      clients = payload?.data?.count ?? payload?.count ?? null;
+    }
+  } catch { }
 
-  // 3) fallback progetti
   if (projects == null) {
     try {
-      const res2 = await fetch(
-        CONFIG.apiUrl('api/projects?status=published&limit=200&sort=-createdAt'),
-        { headers: { Accept: 'application/json' } }
-      );
-      if (!res2.ok) {
-        const msg = await parseServerError(res2);
-        console.warn('Projects fallback fetch error:', msg);
-        projects = 0;
-      } else {
-        const list = await res2.json();
-        const arr = Array.isArray(list?.data?.projects)
-          ? list.data.projects
-          : Array.isArray(list?.projects)
-          ? list.projects
-          : Array.isArray(list)
-          ? list
-          : [];
-        projects = arr.length || 0;
+      const res = await fetch(CONFIG.apiUrl('api/projects?status=published&limit=100'), { headers: { Accept: 'application/json' } });
+      if (res.ok) {
+        const list = await res.json();
+        const arr = Array.isArray(list?.items) ? list.items
+          : Array.isArray(list?.data?.projects) ? list.data.projects
+            : Array.isArray(list?.projects) ? list.projects
+              : Array.isArray(list) ? list : [];
+        projects = arr.length;
       }
-    } catch {
-      projects = 0;
-    }
+    } catch { projects = 0; }
   }
 
-  // fallback “morbidi”
   if (clients == null) clients = Math.max(1, Math.round((projects || 0) * 0.6));
   if (satisfaction == null) satisfaction = 98;
 
@@ -268,184 +191,86 @@ async function loadHomeStats() {
   renderStats();
 }
 
-/**
- * Legge quante recensioni APPROVATE esistono (o null se non disponibile)
- */
-async function fetchApprovedReviewsCount() {
-  const url = CONFIG.apiUrl('api/reviews?status=approved&limit=1&countOnly=1');
-  try {
-    const res = await fetch(url, { headers: { Accept: 'application/json' } });
-    if (!res.ok) {
-      // fallback: senza countOnly, usa la lunghezza
-      const res2 = await fetch(
-        CONFIG.apiUrl('api/reviews?status=approved&limit=200&sort=-createdAt'),
-        { headers: { Accept: 'application/json' } }
-      );
-      if (!res2.ok) return null;
-      const data2 = await res2.json().catch(() => ({}));
-      const arr2 = Array.isArray(data2?.data?.reviews)
-        ? data2.data.reviews
-        : Array.isArray(data2?.reviews)
-        ? data2.reviews
-        : Array.isArray(data2)
-        ? data2
-        : [];
-      return typeof arr2.length === 'number' ? arr2.length : null;
-    }
-    // se l’API supporta countOnly
-    const payload = await res.json().catch(() => ({}));
-    const count =
-      payload?.data?.count ??
-      payload?.count ??
-      (Array.isArray(payload?.data?.reviews) ? payload.data.reviews.length : null);
-    return typeof count === 'number' ? count : null;
-  } catch {
-    return null;
-  }
-}
-
 function renderStats() {
   const c = domElements.statsContainer;
   if (!c || !homeState.stats) return;
   const s = homeState.stats;
 
-  c.innerHTML = `
-    <div class="row text-center">
-      <div class="col-6 col-md-3 mb-4">
-        <div class="stat-card">
-          <div class="stat-number" data-target="${s.projects}">0</div>
-          <div class="stat-label">Progetti realizzati</div>
-        </div>
-      </div>
-      <div class="col-6 col-md-3 mb-4">
-        <div class="stat-card">
-          <div class="stat-number" data-target="${s.clients}">0</div>
-          <div class="stat-label">Clienti soddisfatti</div>
-        </div>
-      </div>
-      <div class="col-6 col-md-3 mb-4">
-        <div class="stat-card">
-          <div class="stat-number" data-target="${s.experience}">0</div>
-          <div class="stat-label">Anni di esperienza</div>
-        </div>
-      </div>
-      <div class="col-6 col-md-3 mb-4">
-        <div class="stat-card">
-          <div class="stat-number" data-target="${s.satisfaction}">0</div>
-          <div class="stat-label">% Soddisfazione</div>
-        </div>
-      </div>
-    </div>
-  `;
+  const nums = c.querySelectorAll('.stat-number[data-target]');
+  if (nums.length) {
+    const values = [s.projects, s.clients, s.experience, s.satisfaction];
+    nums.forEach((el, i) => { if (values[i] != null) el.dataset.target = values[i]; });
+    animateCounters();
+    return;
+  }
 
+  c.innerHTML = `
+    <div class="rg-stat"><span class="rg-stat__num stat-number" data-target="${s.projects}">0</span><span class="rg-stat__label">Progetti realizzati</span></div>
+    <div class="rg-stat"><span class="rg-stat__num stat-number" data-target="${s.experience}">0</span><span class="rg-stat__label">Anni di esperienza</span></div>
+    <div class="rg-stat"><span class="rg-stat__num stat-number" data-target="${s.satisfaction}">0</span><span class="rg-stat__label">% Soddisfazione</span></div>
+  `;
   animateCounters();
 }
 
 function animateCounters() {
-  const counters = document.querySelectorAll('.stat-number');
-  counters.forEach((el) => {
+  document.querySelectorAll('.stat-number[data-target]').forEach(el => {
     const target = parseInt(el.dataset.target || '0', 10);
     const start = performance.now();
-    const duration = 1200;
-
-    function tick(t) {
-      const p = Math.min((t - start) / duration, 1);
+    const dur = 1200;
+    const tick = t => {
+      const p = Math.min((t - start) / dur, 1);
       const ease = 1 - Math.pow(1 - p, 4);
-      el.textContent = formatNumber(Math.floor(target * ease));
+      el.textContent = Math.floor(target * ease);
       if (p < 1) requestAnimationFrame(tick);
-      else el.textContent = formatNumber(target);
-    }
+      else el.textContent = target;
+    };
     requestAnimationFrame(tick);
   });
 }
 
-/* ---------- helpers visivi ---------- */
-function toggleProjectsLoading(show) {
-  domElements.projectsLoading?.classList.toggle('d-none', !show);
-}
-
+function toggleProjectsLoading(show) { domElements.projectsLoading?.classList.toggle('d-none', !show); }
 function showProjectsError(msg) {
   if (domElements.projectsErrorMsg) domElements.projectsErrorMsg.textContent = msg;
   domElements.projectsError?.classList.remove('d-none');
 }
-
-function hideProjectsError() {
-  domElements.projectsError?.classList.add('d-none');
-}
-
-function showProjectsEmpty() {
-  domElements.projectsEmpty?.classList.remove('d-none');
-}
-
-function hideProjectsEmpty() {
-  domElements.projectsEmpty?.classList.add('d-none');
-}
+function hideProjectsError() { domElements.projectsError?.classList.add('d-none'); }
+function showProjectsEmpty() { domElements.projectsEmpty?.classList.remove('d-none'); }
+function hideProjectsEmpty() { domElements.projectsEmpty?.classList.add('d-none'); }
 
 function showSkeletonProjects() {
   const c = domElements.projectsContainer;
   if (!c) return;
-  c.innerHTML = `
-    ${Array.from({ length: 3 })
-      .map(
-        () => `
-      <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card h-100">
-          <div class="card-img-top skeleton-image"></div>
-          <div class="card-body">
-            <div class="skeleton-title"></div>
-            <div class="skeleton-text"></div>
-            <div class="skeleton-text short"></div>
-            <div class="skeleton-buttons mt-3"></div>
-          </div>
+  c.innerHTML = Array.from({ length: 3 }).map(() => `
+    <div class="col-md-6 col-lg-4 mb-4">
+      <div class="card h-100">
+        <div class="card-img-top skeleton-image" style="height:200px"></div>
+        <div class="card-body">
+          <div class="skeleton-title mb-2"></div>
+          <div class="skeleton-text"></div>
+          <div class="skeleton-text short"></div>
         </div>
       </div>
-    `
-      )
-      .join('')}
-  `;
+    </div>`).join('');
 }
 
-function setupAnimations() {
-  animateHeroText();
-}
+function setupAnimations() { animateHeroText(); }
 
 function animateHeroText() {
-  const title = domElements.heroTitle;
-  const sub = domElements.heroSubtitle;
-  if (title) {
-    title.style.opacity = '0';
-    title.style.transform = 'translateY(30px)';
+  [domElements.heroTitle, domElements.heroSubtitle].forEach((el, i) => {
+    if (!el) return;
+    el.style.cssText = 'opacity:0;transform:translateY(30px)';
     setTimeout(() => {
-      title.style.transition = 'all .8s ease-out';
-      title.style.opacity = '1';
-      title.style.transform = 'translateY(0)';
+      el.style.cssText = `opacity:1;transform:translateY(0);transition:all .8s ease-out ${i * 0.15}s`;
     }, 100);
-  }
-  if (sub) {
-    sub.style.opacity = '0';
-    sub.style.transform = 'translateY(20px)';
-    setTimeout(() => {
-      sub.style.transition = 'all .8s ease-out .25s';
-      sub.style.opacity = '1';
-      sub.style.transform = 'translateY(0)';
-    }, 200);
-  }
+  });
 }
 
 function animateProjectsOnScroll() {
-  const cards = document.querySelectorAll('.project-card');
-  cards.forEach((card, i) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(30px)';
-    card.style.transition = `all .6s ease-out ${i * 0.06}s`;
-
-    const obs = new IntersectionObserver((entries) => {
-      entries.forEach((en) => {
-        if (en.isIntersecting) {
-          card.style.opacity = '1';
-          card.style.transform = 'translateY(0)';
-          obs.unobserve(card);
-        }
+  document.querySelectorAll('.project-card').forEach((card, i) => {
+    card.style.cssText = `opacity:0;transform:translateY(30px);transition:all .6s ease-out ${i * 0.06}s`;
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(en => {
+        if (en.isIntersecting) { card.style.opacity = '1'; card.style.transform = 'translateY(0)'; obs.unobserve(card); }
       });
     });
     obs.observe(card);
@@ -454,42 +279,13 @@ function animateProjectsOnScroll() {
 
 function loadMockProjects() {
   homeState.featuredProjects = [
-    {
-      id: '1',
-      title: 'Portfolio Modern',
-      description: 'Sito portfolio responsive',
-      technologies: ['React', 'Node.js', 'MongoDB'],
-      category: 'web',
-      featured: true,
-      github: 'https://github.com/ggoumou254',
-      demo: 'https://github.com/ggoumou254',
-      image: null,
-    },
-    {
-      id: '2',
-      title: 'Piattaforma E-commerce',
-      description: 'Soluzione e-commerce completa',
-      technologies: ['Vue.js', 'Express', 'PostgreSQL'],
-      category: 'web',
-      featured: true,
-      github: 'https://github.com/ggoumou254',
-      demo: null,
-      image: null,
-    },
+    { id: '1', title: 'RoadCtrl', description: 'SaaS gestione infrastrutture stradali in Guinea.', technologies: ['React', 'Node.js', 'MongoDB'], category: 'web', featured: true, github: 'https://github.com/ggoumou254', demo: null, image: null },
+    { id: '2', title: 'Portfolio Full Stack', description: 'Portfolio SPA con router, admin panel, AI dashboard.', technologies: ['Node.js', 'MongoDB', 'JavaScript'], category: 'web', featured: true, github: 'https://github.com/ggoumou254', demo: null, image: null },
+    { id: '3', title: 'Deep Learning CNN', description: 'Modelli CNN con Python e TensorFlow.', technologies: ['Python', 'TensorFlow', 'Keras'], category: 'other', featured: true, github: 'https://github.com/ggoumou254', demo: null, image: null },
   ];
   renderFeaturedProjects();
-  showNotification('Visualizzazione dati dimostrativi', 'info');
 }
 
 function escapeHtml(s) {
-  return String(s || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-  if (document.getElementById('home-projects')) initHome();
-});

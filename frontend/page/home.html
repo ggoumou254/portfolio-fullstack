@@ -1,229 +1,296 @@
-<!-- frontend/page/about.html -->
-<link rel="stylesheet" href="/css/styles.css" />
+<!-- /page/home.html -->
 
-<section class="about-hero bg-gradient-primary text-white py-5 py-lg-7">
-  <div class="container">
-    <div class="row align-items-center g-4">
-      <div class="col-lg-7">
-        <span class="badge bg-white text-primary mb-3 px-3 py-2 rounded-pill fw-semibold">
-          <i class="bi bi-person-hearts me-1"></i> Scopri di me
-        </span>
-        <h1 class="display-5 fw-bold mb-3">Ciao, sono <span class="text-warning">Raphael Goumou</span></h1>
-        <p class="lead opacity-90 mb-4">
-          Sviluppatore Full-Stack appassionato di tecnologia, design funzionale e soluzioni scalabili.
-          Credo in un software piccolo, chiaro e ben fatto: ogni riga di codice deve servire una persona reale.
+<!-- HERO -->
+<section class="rg-hero" id="home-hero">
+  <div class="rg-hero__container">
+    <div>
+      <div class="rg-hero__eyebrow">
+        <span class="rg-hero__eyebrow-dot"></span>
+        Full Stack Developer & IT Specialist
+      </div>
+      <h1 class="rg-hero__title" id="hero-title">
+        <span class="rg-hero__title-line">Costruisco</span>
+        <span class="rg-hero__title-accent">sistemi digitali</span>
+        <span class="rg-hero__title-line">che scalano.</span>
+      </h1>
+      <p class="rg-hero__desc" id="hero-subtitle">
+        Sono <strong>Raphael Goumou</strong>, sviluppatore basato a Roma. Creo applicazioni
+        web, API sicure e soluzioni AI-powered che eliminano il lavoro manuale.
+      </p>
+      <div class="rg-hero__actions">
+        <a href="#" data-page="projects" class="rg-btn rg-btn--primary rg-btn--lg" id="hero-cta">
+          <i class="bi bi-grid-3x3-gap"></i> Guarda i progetti
+        </a>
+        <a href="#" data-page="about" class="rg-btn rg-btn--outline rg-btn--lg">
+          <i class="bi bi-person"></i> Chi sono
+        </a>
+      </div>
+      <div class="rg-hero__stats" id="home-stats">
+        <div class="rg-stat">
+          <span class="rg-stat__num stat-number" data-target="5">0</span>
+          <span class="rg-stat__label">Progetti completati</span>
+        </div>
+        <div class="rg-stat">
+          <span class="rg-stat__num stat-number" data-target="3">0</span>
+          <span class="rg-stat__label">Anni di esperienza</span>
+        </div>
+        <div class="rg-stat">
+          <span class="rg-stat__num stat-number" data-target="10">0</span>
+          <span class="rg-stat__label">Tecnologie</span>
+        </div>
+        <div class="rg-stat">
+          <span class="rg-stat__num stat-number" data-target="98">0</span>
+          <span class="rg-stat__label">% Soddisfazione</span>
+        </div>
+      </div>
+    </div>
+    <div class="rg-hero__visual">
+      <img src="/assets/img/20181215_154034.jpg" alt="Raphael Goumou" class="rg-hero__photo" loading="eager"
+        onerror="this.style.display='none'" />
+      <div class="rg-hero__visual-badge rg-hero__visual-badge--tl">
+        <i class="bi bi-lightning-charge-fill"></i> Disponibile
+      </div>
+      <div class="rg-hero__visual-badge rg-hero__visual-badge--br">
+        <i class="bi bi-geo-alt-fill"></i> Roma, Italia
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- POWERED BY -->
+<div class="rg-powered">
+  <div class="rg-powered__inner">
+    <span class="rg-powered__label">Stack usato quotidianamente</span>
+    <div class="rg-powered__logos">
+      <span class="rg-powered__tech"><i class="bi bi-node-plus"></i> Node.js</span>
+      <span class="rg-powered__tech"><i class="bi bi-database"></i> MongoDB</span>
+      <span class="rg-powered__tech"><i class="bi bi-braces"></i> React</span>
+      <span class="rg-powered__tech"><i class="bi bi-cpu"></i> Python AI</span>
+      <span class="rg-powered__tech"><i class="bi bi-box-seam"></i> Docker</span>
+      <span class="rg-powered__tech"><i class="bi bi-shield-check"></i> JWT / Helmet</span>
+    </div>
+  </div>
+</div>
+
+<!-- ABOUT TEASER -->
+<section class="rg-about-teaser rg-section">
+  <div class="rg-section__inner">
+    <div class="rg-about-teaser__grid">
+      <div class="rg-reveal">
+        <span class="rg-section__label">La mia storia</span>
+        <h2 class="rg-section__title">Le competenze da sole non bastano.</h2>
+        <p class="rg-about-teaser__story">
+          Ho accumulato certificazioni, studiato reti Cisco, programmato CNN con TensorFlow, costruito dashboard
+          enterprise. Ma il vero salto e avvenuto quando ho iniziato a <strong>costruire sistemi</strong>.
         </p>
-        <div class="d-flex flex-wrap gap-4">
-          <div><div class="h4 fw-bold mb-0">2+</div><div class="small opacity-80">Anni di esperienza</div></div>
-          <div><div class="h4 fw-bold mb-0">50+</div><div class="small opacity-80">Progetti consegnati</div></div>
-          <div><div class="h4 fw-bold mb-0">98%</div><div class="small opacity-80">Clienti soddisfatti</div></div>
-        </div>
+        <a href="#" data-page="about" class="rg-btn rg-btn--outline" style="margin-top:var(--sp-6)">
+          Scopri di piu <i class="bi bi-arrow-right"></i>
+        </a>
       </div>
-
-      <div class="col-lg-5 text-center">
-        <div class="position-relative">
-          <img
-            src="../assets/img/IDRD2142.PNG"
-            alt="Ritratto professionale di Raphael Goumou"
-            class="img-fluid rounded-3 shadow-lg"
-            loading="lazy"
-          />
-          <span class="position-absolute top-0 start-0 m-3 small bg-dark text-white rounded-pill px-3 py-1">
-            <i class="bi bi-code-slash me-1"></i> Full-Stack
-          </span>
-          <span class="position-absolute bottom-0 end-0 m-3 small bg-success text-white rounded-pill px-3 py-1">
-            <i class="bi bi-lightning me-1"></i> Sempre curioso
-          </span>
+      <div class="rg-reveal">
+        <div class="rg-skills-grid">
+          <div class="rg-skill-chip"><i class="bi bi-braces me-1"></i>JavaScript</div>
+          <div class="rg-skill-chip"><i class="bi bi-server me-1"></i>Node.js</div>
+          <div class="rg-skill-chip"><i class="bi bi-database me-1"></i>MongoDB</div>
+          <div class="rg-skill-chip"><i class="bi bi-cpu me-1"></i>Python</div>
+          <div class="rg-skill-chip"><i class="bi bi-box-seam me-1"></i>Docker</div>
+          <div class="rg-skill-chip"><i class="bi bi-git me-1"></i>Git/CI-CD</div>
+          <div class="rg-skill-chip"><i class="bi bi-shield me-1"></i>Security</div>
+          <div class="rg-skill-chip"><i class="bi bi-robot me-1"></i>AI/ML</div>
+          <div class="rg-skill-chip"><i class="bi bi-diagram-3 me-1"></i>Reti Cisco</div>
+        </div>
+        <div style="display:grid;gap:var(--sp-3);margin-top:var(--sp-6)">
+          <div class="rg-evidence-box"><i class="bi bi-check-circle-fill"></i><span>Sistema di delega efficace</span>
+          </div>
+          <div class="rg-evidence-box"><i class="bi bi-check-circle-fill"></i><span>Automazioni 24/7</span></div>
+          <div class="rg-evidence-box"><i class="bi bi-check-circle-fill"></i><span>API sicure: JWT, Helmet, rate
+              limit</span></div>
+          <div class="rg-evidence-box"><i class="bi bi-check-circle-fill"></i><span>Deploy containerizzato: Docker +
+              CI/CD</span></div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- BIO -->
-<section class="py-5 py-lg-6 bg-light">
-  <div class="container">
-    <div class="row g-4 align-items-start">
-      <div class="col-lg-7">
-        <h2 class="h1 fw-bold mb-3">La mia storia in breve</h2>
-        <p class="lead text-muted">
-          Sono partito dalla curiosità: capire come funziona il web, come parlano tra loro i servizi,
-          perché un’interfaccia “fluida” fa la differenza. Da lì ho costruito un percorso fatto di studio,
-          sperimentazione e progetti reali: siti, app, API e pipeline che trasformano idee in valore.
-        </p>
-        <p class="text-muted">
-          Oggi lavoro con <strong>JavaScript/TypeScript</strong> (React, Node.js), <strong>Python</strong> (analisi e API),
-          <strong>MongoDB/PostgreSQL</strong> e pratiche <strong>DevOps</strong> (Docker, CI/CD).
-          Mi piace unire estetica e performance, accessibilità e scalabilità.
-        </p>
-        <div class="mt-3">
-          <a href="#contact" data-page="contact" class="btn btn-primary me-2">
-            <i class="bi bi-chat-dots me-2"></i> Parliamo del tuo progetto
-          </a>
-          <a href="/assets/img/cv-goumou-raphael001.pdf" class="btn btn-outline-secondary" download="CV_Raphael_Goumou.pdf">
-            <i class="bi bi-download me-2"></i> Scarica il mio CV
-          </a>
+<!-- FEATURED PROJECTS -->
+<section class="rg-section" id="featured-projects-section">
+  <div class="rg-section__inner">
+    <div class="rg-section__header rg-reveal">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--sp-4)">
+        <div>
+          <span class="rg-section__label">Portfolio</span>
+          <h2 class="rg-section__title">Progetti in evidenza</h2>
         </div>
+        <a href="#" data-page="projects" class="rg-btn rg-btn--outline">
+          Tutti i progetti <i class="bi bi-arrow-right"></i>
+        </a>
       </div>
-      <div class="col-lg-5">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body p-4">
-            <h3 class="h5 fw-semibold mb-3"><i class="bi bi-heart me-2 text-danger"></i> Cosa mi appassiona</h3>
-            <ul class="list-unstyled text-muted mb-0">
-              <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i> Semplificare problemi complessi con codice chiaro</li>
-              <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i> UX accessibile e reattiva su ogni dispositivo</li>
-              <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i> Dati utili: metriche, automazioni, insight</li>
-              <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i> DevOps: rilasci rapidi, ambienti riproducibili</li>
-            </ul>
+    </div>
+
+    <div id="home-projects-loading" class="d-none">
+      <div class="row row-cols-1 row-cols-md-3 g-4">
+        <div class="col">
+          <div class="card h-100">
+            <div class="card-img-top bg-light" style="height:200px"></div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="card h-100">
+            <div class="card-img-top bg-light" style="height:200px"></div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="card h-100">
+            <div class="card-img-top bg-light" style="height:200px"></div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-</section>
 
-<!-- TIMELINE (Percorso) -->
-<section class="py-5">
-  <div class="container">
-    <h2 class="h1 fw-bold text-center mb-5">Percorso</h2>
-    <div class="row g-4">
-      <div class="col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body p-4">
-            <div class="d-flex align-items-start">
-              <div class="me-3 text-primary"><i class="bi bi-mortarboard fs-3"></i></div>
-              <div>
-                <h3 class="h5 fw-semibold mb-1">Formazione</h3>
-                <p class="text-muted mb-2">
-                  Studio continuo su sviluppo web, architetture backend, basi di data analysis e
-                  pratiche DevOps moderne.
-                </p>
-                <ul class="small text-muted mb-0">
-                  <li>Frontend: HTML/CSS, Bootstrap/Tailwind, React/Next.js</li>
-                  <li>Backend: Node.js/Express, Python (FastAPI), REST & GraphQL</li>
-                  <li>DB: MongoDB, PostgreSQL, SQLite</li>
-                  <li>Tooling: Git, Docker, CI/CD (GitHub Actions)</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div><!-- col -->
-
-      <div class="col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body p-4">
-            <div class="d-flex align-items-start">
-              <div class="me-3 text-success"><i class="bi bi-briefcase fs-3"></i></div>
-              <div>
-                <h3 class="h5 fw-semibold mb-1">Esperienze & Progetti</h3>
-                <p class="text-muted mb-2">
-                  Ho realizzato applicazioni end-to-end: dalla definizione dei requisiti al deploy in produzione.
-                </p>
-                <ul class="small text-muted mb-0">
-                  <li>Dashboard e portali admin con ruoli/permessi</li>
-                  <li>API sicure con autenticazione JWT e rate-limit</li>
-                  <li>E-commerce, cataloghi, piattaforme di contenuti</li>
-                  <li>Automazione build, test e rilascio con CI/CD</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div><!-- col -->
-    </div>
-  </div>
-</section>
-
-<!-- COMPETENZE (pill) -->
-<section class="py-5 bg-light">
-  <div class="container">
-    <h2 class="h1 fw-bold text-center mb-4">Stack & Competenze</h2>
-    <div class="d-flex flex-wrap gap-2 justify-content-center">
-      <span class="badge bg-light text-dark border"><i class="bi bi-braces me-1"></i> JavaScript / TypeScript</span>
-      <span class="badge bg-light text-dark border"><i class="bi bi-react me-1"></i> React / Next.js</span>
-      <span class="badge bg-light text-dark border"><i class="bi bi-node-plus me-1"></i> Node.js / Express</span>
-      <span class="badge bg-light text-dark border"><i class="bi bi-cpu me-1"></i> Python / FastAPI</span>
-      <span class="badge bg-light text-dark border"><i class="bi bi-database me-1"></i> MongoDB / PostgreSQL</span>
-      <span class="badge bg-light text-dark border"><i class="bi bi-box-seam me-1"></i> Docker</span>
-      <span class="badge bg-light text-dark border"><i class="bi bi-git me-1"></i> Git / CI-CD</span>
-      <span class="badge bg-light text-dark border"><i class="bi bi-universal-access me-1"></i> Accessibilità</span>
-      <span class="badge bg-light text-dark border"><i class="bi bi-shield-check me-1"></i> Sicurezza</span>
-    </div>
-  </div>
-</section>
-
-<!-- VALORI -->
-<section class="py-5">
-  <div class="container">
-    <h2 class="h1 fw-bold text-center mb-5">Come lavoro</h2>
-    <div class="row g-4">
-      <div class="col-md-4">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body p-4">
-            <h3 class="h5 fw-semibold"><i class="bi bi-emoji-smile me-2 text-warning"></i> Orientato alle persone</h3>
-            <p class="text-muted mb-0">Prima gli utenti, poi il codice. Decisioni guidate dall’esperienza reale di chi usa il prodotto.</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body p-4">
-            <h3 class="h5 fw-semibold"><i class="bi bi-speedometer2 me-2 text-primary"></i> Performance & qualità</h3>
-            <p class="text-muted mb-0">Componenti leggeri, API veloci, attenzione ai dettagli e test dove contano davvero.</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body p-4">
-            <h3 class="h5 fw-semibold"><i class="bi bi-diagram-3 me-2 text-success"></i> Collaborazione trasparente</h3>
-            <p class="text-muted mb-0">Roadmap chiare, feedback continui, documentazione essenziale per muoverci veloci insieme.</p>
-          </div>
-        </div>
+    <div id="home-projects-error" class="rg-alert rg-alert--error d-none" role="alert">
+      <i class="bi bi-exclamation-triangle"></i>
+      <div>
+        <strong>Errore caricamento</strong>
+        <p id="home-projects-error-message" class="mb-0 mt-1"></p>
+        <button class="rg-btn rg-btn--ghost" data-action="retry-home-projects">
+          <i class="bi bi-arrow-clockwise"></i> Riprova
+        </button>
       </div>
     </div>
-  </div>
-</section>
 
-<!-- HOBBY -->
-<section class="py-5 bg-dark text-white">
-  <div class="container">
-    <div class="row g-4 align-items-center">
-      <div class="col-lg-7">
-        <h2 class="h1 fw-bold mb-3">Oltre il codice</h2>
-        <p class="opacity-90">
-          Amo imparare e condividere: leggere, sperimentare nuove librerie, creare piccole utility open-source.
-          Nel tempo libero mi piace esplorare design system, fare sport e scattare qualche foto.
-        </p>
-      </div>
-      <div class="col-lg-5">
-        <div class="d-flex flex-wrap gap-2">
-          <span class="badge bg-light text-dark"><i class="bi bi-book me-1"></i> Lettura</span>
-          <span class="badge bg-light text-dark"><i class="bi bi-camera me-1"></i> Fotografia</span>
-          <span class="badge bg-light text-dark"><i class="bi bi-joystick me-1"></i> Sperimentazione</span>
-          <span class="badge bg-light text-dark"><i class="bi bi-bicycle me-1"></i> Sport</span>
-        </div>
-      </div>
+    <div id="home-projects-empty" class="d-none text-center py-5">
+      <i class="bi bi-inbox" style="font-size:3rem;color:var(--c-text-3)"></i>
+      <p style="color:var(--c-text-3);margin-top:var(--sp-4)">Nessun progetto ancora.</p>
     </div>
+
+    <!-- Bootstrap grid — home.js inserisce col-md-6 col-lg-4 -->
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" id="home-projects"></div>
   </div>
 </section>
 
 <!-- CTA -->
-<section class="py-5 bg-gradient-primary text-white">
-  <div class="container text-center">
-    <h2 class="display-6 fw-bold mb-3">Pronto a costruire qualcosa di utile?</h2>
-    <p class="lead opacity-90 mb-4">Scrivimi due righe: capiamo insieme obiettivi, tempi e priorità.</p>
-    <div class="d-flex gap-3 justify-content-center">
-      <a href="#contact" data-page="contact" class="btn btn-warning btn-lg">
-        <i class="bi bi-envelope-paper me-2"></i> Contattami
-      </a>
-      <a href="#projects" data-page="projects" class="btn btn-outline-light btn-lg">
-        <i class="bi bi-grid-3x3-gap me-2"></i> Guarda i progetti
-      </a>
+<section class="rg-section rg-cta-banner">
+  <div class="rg-section__inner">
+    <div class="rg-cta-banner__inner rg-reveal">
+      <div>
+        <h2 class="rg-section__title">Pronto a scalare il tuo business?</h2>
+        <p class="rg-section__desc">Prima consulenza gratuita e senza impegno.</p>
+      </div>
+      <div class="rg-cta-banner__actions">
+        <a href="#" data-page="contact" class="rg-btn rg-btn--primary rg-btn--lg">
+          <i class="bi bi-rocket-takeoff"></i> Inizia ora
+        </a>
+        <a href="#" data-page="newsletter" class="rg-btn rg-btn--ghost">
+          <i class="bi bi-envelope-paper"></i> Newsletter
+        </a>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- (Facoltativo) Script per animazioni/contatori della pagina About -->
-<script defer src="/js/about.js"></script>
+<style>
+  .rg-powered {
+    background: var(--c-surface);
+    border-top: 1px solid var(--c-border);
+    border-bottom: 1px solid var(--c-border);
+    padding: var(--sp-4) var(--sp-6);
+  }
+
+  .rg-powered__inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-8);
+    flex-wrap: wrap;
+  }
+
+  .rg-powered__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--c-text-3);
+    white-space: nowrap;
+  }
+
+  .rg-powered__logos {
+    display: flex;
+    gap: var(--sp-6);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .rg-powered__tech {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--c-text-2);
+    transition: color var(--t-fast);
+  }
+
+  .rg-powered__tech:hover {
+    color: var(--c-accent);
+  }
+
+  .rg-evidence-box {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--c-surface-2);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-md);
+    font-size: 0.875rem;
+    color: var(--c-text-2);
+    transition: all var(--t-fast);
+  }
+
+  .rg-evidence-box i {
+    color: var(--c-accent);
+  }
+
+  .rg-evidence-box:hover {
+    border-color: var(--c-accent);
+    background: var(--c-accent-dim);
+    color: var(--c-text);
+  }
+
+  .rg-cta-banner {
+    background: var(--c-surface);
+    border-top: 1px solid var(--c-border);
+  }
+
+  .rg-cta-banner__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-8);
+    flex-wrap: wrap;
+    background: linear-gradient(135deg, var(--c-surface-2), var(--c-surface-3));
+    border: 1px solid var(--c-border-2);
+    border-radius: var(--r-xl);
+    padding: var(--sp-8) var(--sp-12);
+  }
+
+  .rg-cta-banner__actions {
+    display: flex;
+    gap: var(--sp-4);
+    flex-wrap: wrap;
+  }
+
+  @media (max-width:768px) {
+    .rg-cta-banner__inner {
+      padding: var(--sp-6);
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .rg-cta-banner__actions {
+      justify-content: center;
+    }
+  }
+</style>

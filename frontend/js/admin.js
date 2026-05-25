@@ -1,32 +1,67 @@
 /**
- * Panel d'administration – gestion projets
- * @version 2.4.0
- * - usa /api/projects/admin/all
- * - invio form con FormData (multipart) per includere l'immagine
- * - 401 handling centralizzato (logout + redirect)
+ * Admin panel — gestione progetti
+ * @version 3.1.0
  */
-
 import { getToken, verifyToken, logout, isAuthenticated, hasRole } from './auth.js';
 import { CONFIG } from './config.js';
 import { showNotification, toggleLoading, formatDate, truncate } from './utils.js';
 
-const adminState = {
-  isInitialized: false,
-  currentView: 'projects',
+const state = {
   projects: [],
   selectedProject: null,
   isSubmitting: false,
-  isLoadingProjects: false,
-  filters: {}
+  isLoading: false,
+  filters: { search: '', status: 'all' }
 };
 
-let domElements = {};
-const showEl = el => el && el.classList.remove('d-none');
-const hideEl = el => el && el.classList.add('d-none');
+/* -----------------------------------------------
+   Modal helpers
+----------------------------------------------- */
+function openModal(id) {
+  // Sposta il modal nel body se e dentro #app (evita problemi Bootstrap)
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.closest('#app')) {
+    document.body.appendChild(el);
+  }
 
-/* ========================
+  const bs = window.bootstrap;
+  if (bs?.Modal) {
+    bs.Modal.getOrCreateInstance(el).show();
+  } else {
+    el.style.display = 'flex';
+    el.classList.add('show');
+    el.removeAttribute('aria-hidden');
+    document.body.classList.add('modal-open');
+    let bd = document.getElementById('_modal_bd');
+    if (!bd) {
+      bd = document.createElement('div');
+      bd.id = '_modal_bd';
+      bd.className = 'modal-backdrop fade show';
+      document.body.appendChild(bd);
+    }
+  }
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const bs = window.bootstrap;
+  if (bs?.Modal) {
+    const m = bs.Modal.getInstance(el);
+    if (m) m.hide();
+  } else {
+    el.style.display = '';
+    el.classList.remove('show');
+    el.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    document.getElementById('_modal_bd')?.remove();
+  }
+}
+
+/* -----------------------------------------------
    Init
-======================== */
+----------------------------------------------- */
 export async function initAdmin() {
   let token = getToken();
   if (!token) {
@@ -40,436 +75,351 @@ export async function initAdmin() {
   }
 
   if (!isAuthenticated() || !hasRole('admin')) {
-    showNotification('Accès réservé aux administrateurs', 'error');
+    showNotification('Accesso riservato agli amministratori', 'error');
     window.location.hash = 'home';
     return;
   }
 
-  try {
-    setupDOM();
-    setupEventListeners();
-    await loadAdminProjects(true);
-    adminState.isInitialized = true;
-  } catch (err) {
-    console.error('❌ ADMIN init:', err);
-    showNotification('Erreur lors du chargement du panel admin', 'error');
+  // Sposta il modal nel body subito dopo l'iniezione del frammento
+  moveModalToBody();
+  setupEvents();
+  await loadProjects();
+}
+
+function moveModalToBody() {
+  const modal = document.getElementById('projectModal');
+  if (modal && modal.closest('#app')) {
+    document.body.appendChild(modal);
+    // Reinizializza Bootstrap sul modal
+    if (window.bootstrap?.Modal) {
+      window.bootstrap.Modal.getOrCreateInstance(modal);
+    }
   }
 }
 
-function setupDOM() {
-  domElements = {
-    navTabs: document.querySelectorAll('[data-admin-tab]'),
-    logoutBtn: document.getElementById('logout-btn'),
-
-    projectsView: document.getElementById('admin-projects-view'),
-    statsView: document.getElementById('admin-stats-view'),
-
-    projectsBody: document.getElementById('admin-projects-body'),
-    projectsLoading: document.getElementById('admin-projects-loading'),
-    projectsError: document.getElementById('admin-projects-error'),
-    projectsCount: document.getElementById('admin-projects-count'),
-
-    projectForm: document.getElementById('project-form'),
-    projectModal: document.getElementById('projectModal'),
-    projectSubmitBtn: document.getElementById('project-submit-btn'),
-    projectFormError: document.getElementById('project-form-error'),
-
-    searchInput: document.getElementById('admin-search'),
-    statusFilter: document.getElementById('admin-status-filter'),
-
-    adminWelcome: document.getElementById('admin-welcome')
-  };
-
-  if (domElements.adminWelcome) {
-    domElements.adminWelcome.textContent = 'Bienvenue dans le panel d\'administration';
-  }
-}
-
-function setupEventListeners() {
-  const { logoutBtn, navTabs, projectForm, searchInput, statusFilter } = domElements;
-
-  if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
-
-  navTabs.forEach(tab => tab.addEventListener('click', (e) => {
-    e.preventDefault();
-    switchView(tab.dataset.adminTab);
-  }));
-
-  const newBtn = document.querySelector('[data-bs-target="#projectModal"]');
-  if (newBtn) {
-    newBtn.addEventListener('click', () => {
-      adminState.selectedProject = null;
-      resetProjectForm();
-      const titleEl = document.querySelector('#projectModal .modal-title');
-      if (titleEl) titleEl.textContent = 'Nouveau projet';
+/* -----------------------------------------------
+   Events
+----------------------------------------------- */
+function setupEvents() {
+  document.getElementById('logout-btn')
+    ?.addEventListener('click', () => {
+      if (confirm('Disconnettersi?')) { logout(); window.location.hash = 'home'; }
     });
-  }
 
-  if (projectForm) projectForm.addEventListener('submit', handleProjectSubmit);
+  document.querySelectorAll('[data-admin-tab]').forEach(tab => {
+    tab.addEventListener('click', e => { e.preventDefault(); switchView(tab.dataset.adminTab); });
+  });
 
-  if (searchInput) {
-    searchInput.addEventListener('input', debounce(() => {
-      adminState.filters.search = searchInput.value.trim();
-      filterAndRenderProjects();
+  // Bottone nuovo progetto
+  document.getElementById('btn-new-project')
+    ?.addEventListener('click', () => openNewProjectModal());
+
+  document.getElementById('project-form')
+    ?.addEventListener('submit', handleSubmit);
+
+  // Chiudi modal con btn-close o data-bs-dismiss
+  document.getElementById('projectModal')
+    ?.addEventListener('click', e => {
+      if (e.target.classList.contains('btn-close') ||
+        e.target.getAttribute('data-bs-dismiss') === 'modal') {
+        closeModal('projectModal');
+      }
+    });
+
+  document.getElementById('admin-search')
+    ?.addEventListener('input', debounce(e => {
+      state.filters.search = e.target.value.trim().toLowerCase();
+      renderTable(applyFilters());
     }, 300));
-  }
 
-  if (statusFilter) {
-    statusFilter.addEventListener('change', () => {
-      adminState.filters.status = statusFilter.value;
-      filterAndRenderProjects();
+  document.getElementById('admin-status-filter')
+    ?.addEventListener('change', e => {
+      state.filters.status = e.target.value;
+      renderTable(applyFilters());
     });
-  }
 }
 
-/* ========================
-   Load projects (admin)
-======================== */
-export async function loadAdminProjects(showLoading = true) {
-  if (adminState.isLoadingProjects) return;
-  adminState.isLoadingProjects = true;
-  if (showLoading) showProjectsLoading();
+/* -----------------------------------------------
+   Carica progetti
+----------------------------------------------- */
+export async function loadProjects() {
+  if (state.isLoading) return;
+  state.isLoading = true;
+  showLoading(true);
 
   try {
     const token = getToken();
-    const url = CONFIG.apiUrl(CONFIG.ENDPOINTS.PROJECTS.ADMIN_ALL);
-
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+    const res = await fetch(CONFIG.apiUrl('api/projects/admin/all'), {
+      headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` },
       credentials: 'include'
     });
 
-    if (res.status === 401) {
-      showProjectsError('Session expirée. Veuillez vous reconnecter.');
-      logout();
-      window.location.hash = 'login';
-      return;
-    }
-    if (!res.ok) {
-      const t = await res.text().catch(() => '');
-      throw new Error(`HTTP ${res.status}: ${res.statusText}${t ? ' - ' + t : ''}`);
-    }
+    if (res.status === 401) { handleUnauthorized(); return; }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    const payload = await res.json();
-    const arr = payload?.data?.projects || payload?.projects || [];
+    const data = await res.json();
+    const arr = data?.data?.projects || data?.projects || [];
 
-    adminState.projects = arr.map(p => ({
-      id: p.id || p._id,
-      title: p.title || 'Sans titre',
+    state.projects = arr.map(p => ({
+      id: String(p.id || p._id || ''),
+      title: p.title || 'Senza titolo',
       description: p.description || '',
       technologies: Array.isArray(p.technologies) ? p.technologies : [],
       status: p.status || 'draft',
       featured: !!p.featured,
-      createdAt: p.createdAt,
+      category: p.category || 'web',
+      createdAt: p.createdAt || null,
       image: p.image || '',
       github: p.github || '',
       demo: p.liveDemo || p.demo || ''
     }));
 
-    renderProjectsTable(adminState.projects);
-    updateProjectsCount(adminState.projects.length);
-    hideProjectsError();
-  } catch (error) {
-    console.error('❌ ADMIN load:', error);
-    showProjectsError(error.message || 'Erreur lors du chargement des projets');
-  } finally {
-    if (showLoading) hideProjectsLoading();
-    adminState.isLoadingProjects = false;
-  }
-}
+    renderTable(applyFilters());
+    updateCount(state.projects.length);
+    showError(null);
 
-/* ========================
-   Form handlers
-======================== */
-async function handleProjectSubmit(e) {
-  e.preventDefault();
-  if (adminState.isSubmitting) {
-    showNotification('Soumission déjà en cours...', 'warning');
-    return;
-  }
-  if (!validateProjectForm()) return;
-  await submitProjectForm();
-}
-
-function validateProjectForm() {
-  const title = document.getElementById('project-title')?.value.trim();
-  const description = document.getElementById('project-description')?.value.trim();
-  if (!title) return showFormError('Le titre du projet est requis'), false;
-  if (!description) return showFormError('La description du projet est requise'), false;
-  hideFormError();
-  return true;
-}
-
-async function submitProjectForm() {
-  const { projectSubmitBtn, projectModal, projectForm } = domElements;
-
-  adminState.isSubmitting = true;
-  toggleLoading(projectSubmitBtn, true, 'Enregistrement...');
-
-  try {
-    const token = getToken();
-    const isEdit = !!adminState.selectedProject;
-
-    // costruisci FormData dal form (incluso <input type="file" name="image">)
-    const fd = new FormData(projectForm);
-
-    // normalizza stringhe
-    fd.set('title', document.getElementById('project-title').value.trim());
-    fd.set('description', document.getElementById('project-description').value.trim());
-    fd.set('github', document.getElementById('project-github').value.trim());
-    fd.set('liveDemo', document.getElementById('project-demo').value.trim());
-    fd.set('status', document.getElementById('project-status').value || 'published');
-    fd.set('featured', document.getElementById('project-featured').checked ? 'true' : 'false');
-
-    // technologies normalizzate
-    const tech = document.getElementById('project-technologies').value
-      .split(',').map(t => t.trim()).filter(Boolean).join(', ');
-    fd.set('technologies', tech);
-
-    const endpoint = isEdit
-      ? CONFIG.ENDPOINTS.PROJECTS.UPDATE.replace(':id', adminState.selectedProject.id)
-      : CONFIG.ENDPOINTS.PROJECTS.CREATE;
-
-    const url = CONFIG.apiUrl(endpoint);
-    const res = await fetch(url, {
-      method: isEdit ? 'PUT' : 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
-        // IMPORTANTISSIMO: niente 'Content-Type' -> lo imposta il browser per FormData
-      },
-      credentials: 'include',
-      body: fd
-    });
-
-    if (res.status === 401) {
-      showFormError('Session expirée. Veuillez vous reconnecter.');
-      logout();
-      window.location.hash = 'login';
-      return;
-    }
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.message || `Erreur HTTP ${res.status}`);
-    }
-
-    const modal = bootstrap.Modal.getInstance(projectModal);
-    if (modal) modal.hide();
-    showNotification(isEdit ? 'Projet modifié avec succès' : 'Projet créé avec succès', 'success');
-    await loadAdminProjects(true);
   } catch (err) {
-    console.error('❌ ADMIN save:', err);
-    showFormError(err.message || 'Erreur lors de l\'enregistrement du projet');
+    console.error('loadProjects:', err);
+    showError(err.message);
   } finally {
-    adminState.isSubmitting = false;
-    toggleLoading(projectSubmitBtn, false, 'Enregistrer');
+    state.isLoading = false;
+    showLoading(false);
   }
 }
 
-/* ========================
-   Table rendering
-======================== */
-function filterAndRenderProjects() {
-  const { projects, filters = {} } = adminState;
-  let filtered = [...projects];
-
-  if (filters.search) {
-    const q = filters.search.toLowerCase();
-    filtered = filtered.filter(p =>
-      (p.title || '').toLowerCase().includes(q) ||
-      (p.description || '').toLowerCase().includes(q)
-    );
-  }
-  if (filters.status && filters.status !== 'all') {
-    filtered = filtered.filter(p => p.status === filters.status);
-  }
-
-  renderProjectsTable(filtered);
-  updateProjectsCount(filtered.length);
+/* -----------------------------------------------
+   Filtri + Tabella
+----------------------------------------------- */
+function applyFilters() {
+  let list = [...state.projects];
+  const { search, status } = state.filters;
+  if (search) list = list.filter(p =>
+    p.title.toLowerCase().includes(search) ||
+    p.description.toLowerCase().includes(search) ||
+    p.technologies.some(t => t.toLowerCase().includes(search))
+  );
+  if (status && status !== 'all') list = list.filter(p => p.status === status);
+  return list;
 }
 
-function renderProjectsTable(projects) {
-  const { projectsBody } = domElements;
-  if (!projectsBody) return;
+function renderTable(projects) {
+  const tbody = document.getElementById('admin-projects-body');
+  if (!tbody) return;
+  updateCount(projects.length);
 
   if (!projects.length) {
-    projectsBody.innerHTML = `
-      <tr>
-        <td colspan="6" class="text-center py-4">
-          <div class="text-muted">
-            <i class="bi bi-inbox display-4"></i>
-            <p class="mt-2">Aucun projet trouvé</p>
-          </div>
-        </td>
-      </tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">
+      <i class="bi bi-inbox fs-1 d-block mb-2"></i>Nessun progetto trovato
+    </td></tr>`;
     return;
   }
 
-  projectsBody.innerHTML = projects.map(p => `
-    <tr data-project-id="${p.id}">
+  tbody.innerHTML = projects.map(p => `
+    <tr>
       <td>
-        <div class="d-flex align-items-center">
-          ${p.image ? `
-            <img src="${p.image}" alt="${p.title}" class="rounded me-2" width="40" height="40" loading="lazy">`
-          : `
-            <div class="bg-light rounded d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px;">
-              <i class="bi bi-image text-muted"></i>
-            </div>`}
+        <div class="d-flex align-items-center gap-2">
+          ${p.image
+      ? `<img src="${p.image}" width="40" height="40" class="rounded" loading="lazy">`
+      : `<div class="bg-secondary rounded d-flex align-items-center justify-content-center" style="width:40px;height:40px"><i class="bi bi-image text-white"></i></div>`}
           <div>
-            <strong>${p.title}</strong>
+            <strong>${escHtml(p.title)}</strong>
             ${p.featured ? `<span class="badge bg-warning text-dark ms-1">Featured</span>` : ''}
           </div>
         </div>
       </td>
       <td>
-        <div class="small">${truncate(p.description, 80)}</div>
-        ${p.technologies.length ? `
-          <div class="mt-1">
-            ${p.technologies.slice(0, 3).map(t =>
-              `<span class="badge bg-light text-dark border me-1">${t}</span>`
-            ).join('')}
-          </div>` : ''}
+        <div class="small text-muted">${escHtml(truncate(p.description, 80))}</div>
+        <div class="mt-1 d-flex flex-wrap gap-1">
+          ${p.technologies.slice(0, 3).map(t => `<span class="badge bg-light text-dark border">${escHtml(t)}</span>`).join('')}
+        </div>
       </td>
       <td>
         <span class="badge ${p.status === 'published' ? 'bg-success' : 'bg-secondary'}">
-          ${p.status === 'published' ? 'Publié' : 'Brouillon'}
+          ${p.status === 'published' ? 'Pubblicato' : 'Bozza'}
         </span>
       </td>
       <td class="small text-muted">${p.createdAt ? formatDate(p.createdAt) : '—'}</td>
       <td>
         <div class="btn-group btn-group-sm">
-          <button class="btn btn-outline-primary edit-project" data-project-id="${p.id}">
+          <button class="btn btn-outline-primary" onclick="window.__adminEdit('${p.id}')">
             <i class="bi bi-pencil"></i>
           </button>
-          <button class="btn btn-outline-danger delete-project" data-project-id="${p.id}">
+          <button class="btn btn-outline-danger" onclick="window.__adminDelete('${p.id}')">
             <i class="bi bi-trash"></i>
           </button>
         </div>
       </td>
-    </tr>
-  `).join('');
-
-  document.querySelectorAll('.edit-project').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const id = e.currentTarget.dataset.projectId;
-      const p = adminState.projects.find(x => x.id === id);
-      if (p) editProject(p);
-    });
-  });
-
-  document.querySelectorAll('.delete-project').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const id = e.currentTarget.dataset.projectId;
-      const p = adminState.projects.find(x => x.id === id);
-      if (p) await deleteProject(p);
-    });
-  });
+    </tr>`).join('');
 }
 
-function editProject(project) {
-  adminState.selectedProject = project;
-  document.getElementById('project-title').value = project.title || '';
-  document.getElementById('project-description').value = project.description || '';
-  document.getElementById('project-technologies').value = project.technologies.join(', ');
-  document.getElementById('project-status').value = project.status || 'published';
-  document.getElementById('project-featured').checked = !!project.featured;
-  document.getElementById('project-github').value = project.github || '';
-  document.getElementById('project-demo').value = project.demo || '';
-
-  const modalTitle = document.querySelector('#projectModal .modal-title');
-  if (modalTitle) modalTitle.textContent = 'Modifier le projet';
-
-  const modal = new bootstrap.Modal(domElements.projectModal);
-  modal.show();
+/* -----------------------------------------------
+   Nuovo progetto
+----------------------------------------------- */
+function openNewProjectModal() {
+  state.selectedProject = null;
+  resetForm();
+  const title = document.querySelector('#projectModal .modal-title');
+  if (title) title.textContent = 'Nuovo progetto';
+  openModal('projectModal');
 }
 
-async function deleteProject(project) {
-  if (!confirm(`Êtes-vous sûr de vouloir supprimer "${project.title}" ?`)) return;
+/* -----------------------------------------------
+   Edit / Delete — globali per onclick
+----------------------------------------------- */
+window.__adminEdit = function (id) {
+  const p = state.projects.find(x => x.id === id);
+  if (!p) return;
+  state.selectedProject = p;
+
+  const set = (sel, val) => { const el = document.getElementById(sel); if (el) el.value = val || ''; };
+  set('project-title', p.title);
+  set('project-description', p.description);
+  set('project-technologies', p.technologies.join(', '));
+  set('project-status', p.status);
+  set('project-github', p.github);
+  set('project-demo', p.demo);
+  set('project-category', p.category);
+
+  const feat = document.getElementById('project-featured');
+  if (feat) feat.checked = !!p.featured;
+
+  const title = document.querySelector('#projectModal .modal-title');
+  if (title) title.textContent = 'Modifica progetto';
+
+  showError(null, true);
+  openModal('projectModal');
+};
+
+window.__adminDelete = async function (id) {
+  const p = state.projects.find(x => x.id === id);
+  if (!p || !confirm(`Eliminare "${p.title}"?`)) return;
   try {
     const token = getToken();
-    const url = CONFIG.apiUrl(CONFIG.ENDPOINTS.PROJECTS.DELETE.replace(':id', project.id));
-    const res = await fetch(url, {
+    const res = await fetch(CONFIG.apiUrl(`api/projects/${id}`), {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
       credentials: 'include'
     });
-
-    if (res.status === 401) {
-      showNotification('Session expirée. Veuillez vous reconnecter.', 'warning');
-      logout();
-      window.location.hash = 'login';
-      return;
-    }
-    if (!res.ok) throw new Error('Erreur lors de la suppression');
-
-    showNotification('Projet supprimé avec succès', 'success');
-    await loadAdminProjects(true);
+    if (res.status === 401) { handleUnauthorized(); return; }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    showNotification('Progetto eliminato', 'success');
+    await loadProjects();
   } catch (err) {
-    console.error('❌ ADMIN delete:', err);
-    showNotification('Erreur lors de la suppression', 'error');
+    showNotification('Errore durante l eliminazione', 'error');
+  }
+};
+
+/* -----------------------------------------------
+   Submit form
+----------------------------------------------- */
+async function handleSubmit(e) {
+  e.preventDefault();
+  if (state.isSubmitting) return;
+
+  const title = document.getElementById('project-title')?.value.trim();
+  const desc = document.getElementById('project-description')?.value.trim();
+
+  if (!title) { showError('Il titolo e obbligatorio', true); return; }
+  if (!desc) { showError('La descrizione e obbligatoria', true); return; }
+
+  state.isSubmitting = true;
+  const btn = document.getElementById('project-submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvataggio...'; }
+
+  try {
+    const token = getToken();
+    const isEdit = !!state.selectedProject;
+
+    const tech = (document.getElementById('project-technologies')?.value || '')
+      .split(',').map(t => t.trim()).filter(Boolean);
+
+    // Il backend usa multer — serve SEMPRE FormData (multipart/form-data)
+    const fd = new FormData();
+    fd.append('title', title);
+    fd.append('description', desc);
+    fd.append('github', document.getElementById('project-github')?.value.trim() || '');
+    fd.append('liveDemo', document.getElementById('project-demo')?.value.trim() || '');
+    fd.append('status', document.getElementById('project-status')?.value || 'published');
+    fd.append('category', document.getElementById('project-category')?.value || 'web');
+    fd.append('featured', document.getElementById('project-featured')?.checked ? 'true' : 'false');
+    tech.forEach(t => fd.append('technologies', t));
+
+    const imageFile = document.getElementById('project-image')?.files?.[0];
+    if (imageFile) fd.append('image', imageFile);
+
+    const endpoint = isEdit ? `api/projects/${state.selectedProject.id}` : 'api/projects';
+    const res = await fetch(CONFIG.apiUrl(endpoint), {
+      method: isEdit ? 'PUT' : 'POST',
+      // NON impostare Content-Type — il browser lo imposta automaticamente con boundary per multipart
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+      credentials: 'include',
+      body: fd
+    });
+
+    if (res.status === 401) { handleUnauthorized(); return; }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || `Errore HTTP ${res.status}`);
+
+    closeModal('projectModal');
+    showNotification(isEdit ? 'Progetto aggiornato!' : 'Progetto creato!', 'success');
+    await loadProjects();
+
+  } catch (err) {
+    showError(err.message || 'Errore durante il salvataggio', true);
+  } finally {
+    state.isSubmitting = false;
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Salva'; }
   }
 }
 
-/* ========================
-   UI helpers
-======================== */
-function showProjectsLoading() {
-  showEl(domElements.projectsLoading);
-  if (domElements.projectsBody) domElements.projectsBody.innerHTML = '';
-}
-function hideProjectsLoading() { hideEl(domElements.projectsLoading); }
-
-function showProjectsError(message) {
-  if (domElements.projectsError) { domElements.projectsError.textContent = message; showEl(domElements.projectsError); }
-}
-function hideProjectsError() { hideEl(domElements.projectsError); }
-
-function showFormError(message) {
-  if (domElements.projectFormError) { domElements.projectFormError.textContent = message; showEl(domElements.projectFormError); }
-}
-function hideFormError() { hideEl(domElements.projectFormError); }
-
-function updateProjectsCount(count) {
-  if (domElements.projectsCount) domElements.projectsCount.textContent = `${count} projet${count !== 1 ? 's' : ''}`;
+/* -----------------------------------------------
+   UI Helpers
+----------------------------------------------- */
+function showLoading(on) {
+  document.getElementById('admin-projects-loading')?.classList.toggle('d-none', !on);
 }
 
-function resetProjectForm() {
-  const form = domElements.projectForm;
-  if (form) form.reset();
-  const statusSelect = document.getElementById('project-status');
-  if (statusSelect) statusSelect.value = 'published';
-  hideFormError();
+function showError(msg, isForm = false) {
+  const id = isForm ? 'project-form-error' : 'admin-projects-error';
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (msg) { el.textContent = msg; el.classList.remove('d-none'); }
+  else el.classList.add('d-none');
 }
 
-function handleLogout() {
-  if (confirm('Déconnexion ?')) {
-    logout();
-    window.location.hash = 'home';
-  }
+function updateCount(n) {
+  const el = document.getElementById('admin-projects-count');
+  if (el) el.textContent = `${n} progetto${n !== 1 ? 'i' : ''}`;
+}
+
+function resetForm() {
+  document.getElementById('project-form')?.reset();
+  const status = document.getElementById('project-status');
+  if (status) status.value = 'published';
+  showError(null, true);
 }
 
 function switchView(view) {
-  adminState.currentView = view;
-  domElements.navTabs.forEach(tab => {
-    tab.classList.toggle('active', tab.dataset.adminTab === view);
-  });
-  ['projects','stats'].forEach(v => {
-    const el = domElements[`${v}View`];
-    if (!el) return;
-    v === view ? showEl(el) : hideEl(el);
+  document.querySelectorAll('[data-admin-tab]').forEach(t =>
+    t.classList.toggle('active', t.dataset.adminTab === view)
+  );
+  ['projects', 'stats'].forEach(v => {
+    const el = document.getElementById(`admin-${v}-view`);
+    if (el) el.classList.toggle('d-none', v !== view);
   });
 }
 
-function debounce(fn, wait) {
+function handleUnauthorized() {
+  showNotification('Sessione scaduta. Accedi di nuovo.', 'warning');
+  logout();
+  window.location.hash = 'login';
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function debounce(fn, ms) {
   let t;
-  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }
-
-/* Auto init */
-document.addEventListener('DOMContentLoaded', () => {
-  if (document.getElementById('admin-projects-view')) initAdmin();
-});

@@ -1,7 +1,7 @@
-<!-- pages/admin.html -->
+<!-- /page/admin.html -->
 <section class="container py-4" id="admin-root">
   <div class="d-flex align-items-center justify-content-between mb-3">
-    <h1 class="h3 mb-0" id="admin-welcome">Admin</h1>
+    <h1 class="h3 mb-0" id="admin-welcome">Admin Panel</h1>
     <button id="logout-btn" class="btn btn-outline-danger btn-sm" type="button">
       <i class="bi bi-box-arrow-right me-1"></i> Logout
     </button>
@@ -9,74 +9,69 @@
 
   <!-- Tabs -->
   <ul class="nav nav-tabs mb-3" role="tablist">
-    <li class="nav-item" role="presentation">
-      <a class="nav-link active" href="#" data-admin-tab="projects" aria-current="page">Projets</a>
+    <li class="nav-item">
+      <a class="nav-link active" href="#" data-admin-tab="projects">Progetti</a>
     </li>
-    <li class="nav-item" role="presentation">
+    <li class="nav-item">
       <a class="nav-link" href="#" data-admin-tab="stats">Stats</a>
-    </li>
-    <li class="nav-item" role="presentation">
-      <a class="nav-link" href="#" data-admin-tab="users">Utilisateurs</a>
     </li>
   </ul>
 
   <!-- PROJECTS VIEW -->
-  <div id="admin-projects-view" role="region" aria-labelledby="projects-title">
+  <div id="admin-projects-view">
     <div class="card mb-3">
       <div class="card-body">
         <div class="row g-2 align-items-end">
           <div class="col-md-4">
-            <label class="form-label" for="admin-search">Recherche</label>
-            <input id="admin-search" type="search" class="form-control" placeholder="Titre, description, techno…" autocomplete="off">
+            <label class="form-label" for="admin-search">Ricerca</label>
+            <input id="admin-search" type="search" class="form-control" placeholder="Titolo, descrizione..."
+              autocomplete="off">
           </div>
           <div class="col-md-3">
-            <label class="form-label" for="admin-status-filter">Statut</label>
+            <label class="form-label" for="admin-status-filter">Stato</label>
             <select id="admin-status-filter" class="form-select">
-              <option value="all">Tous</option>
-              <option value="published">Publié</option>
-              <option value="draft">Brouillon</option>
-              <option value="archived">Archivé</option>
+              <option value="all">Tutti</option>
+              <option value="published">Pubblicato</option>
+              <option value="draft">Bozza</option>
+              <option value="archived">Archiviato</option>
             </select>
           </div>
           <div class="col-md-3">
-            <label class="form-label" for="admin-category-filter">Catégorie</label>
+            <label class="form-label" for="admin-category-filter">Categoria</label>
             <select id="admin-category-filter" class="form-select">
-              <option value="all">Toutes</option>
+              <option value="all">Tutte</option>
               <option value="web">Web</option>
               <option value="mobile">Mobile</option>
               <option value="desktop">Desktop</option>
               <option value="api">API</option>
-              <option value="library">Library</option>
-              <option value="tool">Tool</option>
-              <option value="other">Autre</option>
+              <option value="other">Altro</option>
             </select>
           </div>
           <div class="col-md-2 text-md-end">
-            <button class="btn btn-primary w-100" type="button" data-bs-toggle="modal" data-bs-target="#projectModal">
-              <i class="bi bi-plus-lg me-1"></i> Nouveau
+            <button class="btn btn-primary w-100" type="button" id="btn-new-project">
+              <i class="bi bi-plus-lg me-1"></i> Nuovo
             </button>
           </div>
         </div>
       </div>
     </div>
 
-    <div id="admin-projects-loading" class="text-center my-4 d-none" aria-live="polite">
-      <div class="spinner-border" role="status" aria-hidden="true"></div>
-      <div class="mt-2">Chargement…</div>
+    <div id="admin-projects-loading" class="text-center my-4 d-none">
+      <div class="spinner-border" role="status"></div>
+      <div class="mt-2 text-muted">Caricamento...</div>
     </div>
 
-    <div id="admin-projects-error" class="alert alert-danger d-none" role="alert" aria-live="assertive"></div>
+    <div id="admin-projects-error" class="alert alert-danger d-none" role="alert"></div>
 
     <div class="table-responsive">
       <table class="table align-middle">
-        <caption id="projects-title" class="visually-hidden">Liste des projets</caption>
         <thead>
           <tr>
-            <th scope="col">Projet</th>
-            <th scope="col">Détails</th>
-            <th scope="col">Statut</th>
-            <th scope="col">Créé</th>
-            <th scope="col">Actions</th>
+            <th>Progetto</th>
+            <th>Dettagli</th>
+            <th>Stato</th>
+            <th>Creato</th>
+            <th>Azioni</th>
           </tr>
         </thead>
         <tbody id="admin-projects-body"></tbody>
@@ -84,35 +79,17 @@
     </div>
 
     <div class="text-muted small mt-2">
-      <span id="admin-projects-count">0 projets</span>
+      <span id="admin-projects-count">0 progetti</span>
     </div>
   </div>
 
   <!-- STATS VIEW -->
-  <div id="admin-stats-view" class="d-none" role="region" aria-label="Statistiques">
-    <div id="admin-stats-loading" class="text-center my-4">
-      <div class="spinner-border" role="status" aria-hidden="true"></div>
-      <div class="mt-2">Chargement…</div>
+  <div id="admin-stats-view" class="d-none">
+    <div class="text-center my-4">
+      <div class="spinner-border" role="status"></div>
+      <div class="mt-2 text-muted">Caricamento...</div>
     </div>
     <div id="admin-stats-cards" class="row g-3"></div>
-  </div>
-
-  <!-- USERS VIEW -->
-  <div id="admin-users-view" class="d-none" role="region" aria-label="Utilisateurs">
-    <div class="table-responsive">
-      <table class="table align-middle">
-        <caption class="visually-hidden">Liste des utilisateurs</caption>
-        <thead>
-          <tr>
-            <th scope="col">Utilisateur</th>
-            <th scope="col">Email</th>
-            <th scope="col">Rôle</th>
-            <th scope="col">Créé</th>
-          </tr>
-        </thead>
-        <tbody id="admin-users-body"></tbody>
-      </table>
-    </div>
   </div>
 </section>
 
@@ -121,20 +98,20 @@
   <div class="modal-dialog modal-lg">
     <form id="project-form" class="modal-content" enctype="multipart/form-data" novalidate>
       <div class="modal-header">
-        <h5 class="modal-title" id="projectModalLabel">Nouveau projet</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+        <h5 class="modal-title" id="projectModalLabel">Nuovo progetto</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
 
       <div class="modal-body">
-        <div id="project-form-error" class="alert alert-danger d-none" role="alert" aria-live="assertive"></div>
+        <div id="project-form-error" class="alert alert-danger d-none" role="alert"></div>
 
         <div class="row g-3">
           <div class="col-md-8">
-            <label class="form-label" for="project-title">Titre *</label>
+            <label class="form-label" for="project-title">Titolo *</label>
             <input id="project-title" name="title" type="text" class="form-control" required autocomplete="off">
           </div>
           <div class="col-md-4">
-            <label class="form-label" for="project-category">Catégorie</label>
+            <label class="form-label" for="project-category">Categoria</label>
             <select id="project-category" name="category" class="form-select">
               <option value="web">Web</option>
               <option value="mobile">Mobile</option>
@@ -142,61 +119,61 @@
               <option value="api">API</option>
               <option value="library">Library</option>
               <option value="tool">Tool</option>
-              <option value="other">Autre</option>
+              <option value="other">Altro</option>
             </select>
           </div>
 
           <div class="col-12">
-            <label class="form-label" for="project-description">Description</label>
+            <label class="form-label" for="project-description">Descrizione *</label>
             <textarea id="project-description" name="description" rows="4" class="form-control"></textarea>
           </div>
 
           <div class="col-md-6">
-            <label class="form-label" for="project-technologies">Technologies (séparées par des virgules)</label>
-            <input id="project-technologies" name="technologies" type="text" class="form-control" placeholder="React, Node.js, MongoDB">
+            <label class="form-label" for="project-technologies">Tecnologie (separate da virgola)</label>
+            <input id="project-technologies" name="technologies" type="text" class="form-control"
+              placeholder="React, Node.js, MongoDB">
           </div>
 
           <div class="col-md-3">
-            <label class="form-label" for="project-status">Statut</label>
+            <label class="form-label" for="project-status">Stato</label>
             <select id="project-status" name="status" class="form-select">
-              <option value="published">Publié</option>
-              <option value="draft">Brouillon</option>
-              <option value="archived">Archivé</option>
+              <option value="published">Pubblicato</option>
+              <option value="draft">Bozza</option>
+              <option value="archived">Archiviato</option>
             </select>
           </div>
 
           <div class="col-md-3 d-flex align-items-end">
             <div class="form-check">
               <input id="project-featured" name="featured" class="form-check-input" type="checkbox" value="1">
-              <label class="form-check-label" for="project-featured">Featured</label>
+              <label class="form-check-label" for="project-featured">In evidenza</label>
             </div>
           </div>
 
           <div class="col-md-6">
-            <label class="form-label" for="project-github">GitHub</label>
-            <input id="project-github" name="github" type="url" class="form-control" placeholder="https://github.com/...">
+            <label class="form-label" for="project-github">GitHub URL</label>
+            <input id="project-github" name="github" type="url" class="form-control"
+              placeholder="https://github.com/...">
           </div>
 
           <div class="col-md-6">
-            <label class="form-label" for="project-demo">Demo</label>
+            <label class="form-label" for="project-demo">Demo URL</label>
             <input id="project-demo" name="demo" type="url" class="form-control" placeholder="https://...">
           </div>
 
           <div class="col-12">
-            <label class="form-label" for="project-image">Image</label>
+            <label class="form-label" for="project-image">Immagine</label>
             <input id="project-image" name="image" type="file" class="form-control" accept="image/*">
           </div>
         </div>
       </div>
 
       <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
         <button id="project-submit-btn" type="submit" class="btn btn-primary">
-          <i class="bi bi-check2 me-1"></i> Enregistrer
+          <i class="bi bi-check2 me-1"></i> Salva
         </button>
       </div>
     </form>
   </div>
 </div>
-
-<!-- Script admin -->
-<script type="module" src="/js/admin.js" defer></script>

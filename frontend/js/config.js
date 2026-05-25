@@ -1,17 +1,29 @@
 /**
- * Configuration centralisée de l'application
- * @version 2.2.0 (PATHS absolus + hardening prod + override runtime)
+ * Configurazione centralizzata
+ * @version 2.4.0
  */
 
 const ENVIRONMENTS = {
   DEVELOPMENT: 'development',
   STAGING: 'staging',
+
   PRODUCTION: 'production'
 };
 
 const getEnvironment = () => {
-  const { hostname } = window.location || {};
-  if (!hostname || hostname === 'localhost' || hostname === '127.0.0.1') return ENVIRONMENTS.DEVELOPMENT;
+  const { hostname, port } = window.location || {};
+
+  // localhost e IP locali/hotspot
+  const localHosts = ['localhost', '127.0.0.1', '::1', '0.0.0.0'];
+  const localRanges = ['192.168.', '10.', '172.'];
+
+  if (!hostname || localHosts.includes(hostname)) return ENVIRONMENTS.DEVELOPMENT;
+  if (localRanges.some(r => hostname.startsWith(r))) return ENVIRONMENTS.DEVELOPMENT;
+
+  // Porte di sviluppo
+  const devPorts = ['3000', '5500', '5501', '8080', '8000', '4200', '4000'];
+  if (port && devPorts.includes(port)) return ENVIRONMENTS.DEVELOPMENT;
+
   if (hostname.includes('staging.') || hostname.includes('test.')) return ENVIRONMENTS.STAGING;
   return ENVIRONMENTS.PRODUCTION;
 };
@@ -20,169 +32,71 @@ const ENV_CONFIG = {
   [ENVIRONMENTS.DEVELOPMENT]: {
     API_BASE: 'http://localhost:5000',
     DEBUG: true,
-    LOG_LEVEL: 'debug',
-    ENABLE_ANALYTICS: false,
-    CACHE_STRATEGY: 'no-cache',
-    USE_MOCK_API: false,
-    // Percorsi ASSOLUTI per funzionare anche dentro /page/...
-    PATHS: {
-      ASSETS: '/assets',
-      IMAGES: '/assets/img',
-      ICONS:  '/assets/icons',
-      LOCALES:'/locales',
-      MOCK:   '/mock'
-    }
+    PATHS: { ASSETS: '/assets', IMAGES: '/assets/img', ICONS: '/assets/icons', LOCALES: '/locales' }
   },
   [ENVIRONMENTS.STAGING]: {
-    API_BASE: 'https://staging.api.raphaelgoumou.com',
+    API_BASE: 'https://staging-api.raphaelgoumou.com',
     DEBUG: true,
-    LOG_LEVEL: 'info',
-    ENABLE_ANALYTICS: false,
-    CACHE_STRATEGY: 'default',
-    USE_MOCK_API: false,
-    PATHS: {
-      ASSETS: '/assets',
-      IMAGES: '/assets/img',
-      ICONS:  '/assets/icons',
-      LOCALES:'/locales',
-      MOCK:   '/mock'
-    }
+    PATHS: { ASSETS: '/assets', IMAGES: '/assets/img', ICONS: '/assets/icons', LOCALES: '/locales' }
   },
   [ENVIRONMENTS.PRODUCTION]: {
-    API_BASE: 'https://api.raphaelgoumou.com',
+    API_BASE: 'https://portfolio-fullstack-j5am.onrender.com',
     DEBUG: false,
-    LOG_LEVEL: 'warn',
-    ENABLE_ANALYTICS: true,
-    CACHE_STRATEGY: 'default',
-    USE_MOCK_API: false,
-    PATHS: {
-      ASSETS: '/assets',
-      IMAGES: '/assets/img',
-      ICONS:  '/assets/icons',
-      LOCALES:'/locales',
-      MOCK:   '/mock'
-    }
+    PATHS: { ASSETS: '/assets', IMAGES: '/assets/img', ICONS: '/assets/icons', LOCALES: '/locales' }
   }
 };
 
 class AppConfig {
   constructor() {
     this.environment = getEnvironment();
-    this.config = this.loadConfig();
-    this.validateConfig();
-    this.setupGlobalErrorHandling();
+    this.config = this._loadConfig();
+    this._setupErrorHandling();
+    this._logConfig();
   }
 
-  loadConfig() {
-    // Base per env corrente
-    const envConfig = { ...ENV_CONFIG[this.environment] };
-
-    // Overrides runtime opzionali
-    if (window.__APP_CONFIG__) Object.assign(envConfig, window.__APP_CONFIG__);
-    if (window.__API_BASE__) envConfig.API_BASE = this.normalizeApiBase(window.__API_BASE__);
-
-    // Normalizza sempre API_BASE
-    envConfig.API_BASE = this.normalizeApiBase(envConfig.API_BASE);
-
-    // Header default per fetch
-    envConfig.DEFAULT_HEADERS = {
-      'Content-Type': 'application/json',
-      'Cache-Control': envConfig.CACHE_STRATEGY || 'no-cache'
-    };
-
-    return envConfig;
+  _loadConfig() {
+    const cfg = { ...ENV_CONFIG[this.environment] };
+    if (window.__API_BASE__) cfg.API_BASE = this._normalize(window.__API_BASE__);
+    cfg.API_BASE = this._normalize(cfg.API_BASE);
+    return cfg;
   }
 
-  normalizeApiBase(apiBase) {
-    if (!apiBase) return ENV_CONFIG[this.environment].API_BASE;
-    return apiBase
-      .toString().trim().replace(/\s+/g, '')
-      .replace(/([^:]\/)\/+/g, '$1')
-      .replace(/\/+$/g, '');
+  _normalize(base) {
+    if (!base) return ENV_CONFIG[this.environment].API_BASE;
+    return String(base).trim().replace(/\/+$/, '');
   }
 
-  validateConfig() {
-    const { API_BASE } = this.config;
-    if (!API_BASE) throw new Error('API_BASE non configurée');
-    if (this.environment === ENVIRONMENTS.PRODUCTION && !API_BASE.startsWith('https://')) {
-      console.warn('[Config] API_BASE en production devrait utiliser HTTPS');
-    }
-  }
-
-  setupGlobalErrorHandling() {
+  _setupErrorHandling() {
     if (!this.config.DEBUG) return;
-    window.addEventListener('error', (event) => {
-      console.error('[GlobalError]', event.error || event.message);
-    });
-    window.addEventListener('unhandledrejection', (event) => {
-      console.error('[UnhandledRejection]', event.reason);
-    });
+    window.addEventListener('error', e => console.error('[GlobalError]', e.error || e.message));
+    window.addEventListener('unhandledrejection', e => console.error('[UnhandledRejection]', e.reason));
   }
 
-  // Helpers env
+  _logConfig() {
+    if (!this.config.DEBUG) return;
+    console.log('🔧 AppConfig');
+    console.log('Env:', this.environment);
+    console.log('API Base:', this.config.API_BASE);
+    console.log('Paths:', this.config.PATHS);
+  }
+
   isDevelopment() { return this.environment === ENVIRONMENTS.DEVELOPMENT; }
   isProduction() { return this.environment === ENVIRONMENTS.PRODUCTION; }
 
-  // Cache-busting per debug
-  withCacheBust(url) {
-    if (!this.config.DEBUG) return url;
-    const sep = url.includes('?') ? '&' : '?';
-    return `${url}${sep}v=${Date.now()}`;
-  }
-
-  // Costruzione URL API e asset
   apiUrl(endpoint = '') {
     if (!endpoint) return this.config.API_BASE;
     if (/^https?:\/\//i.test(endpoint)) return endpoint;
-    const normalized = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-    return `${this.config.API_BASE}/${normalized}`.replace(/([^:]\/)\/+/g, '$1');
+    const norm = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+    return `${this.config.API_BASE}/${norm}`.replace(/([^:]\/)\/+/g, '$1');
   }
 
-  assetUrl(p = '') {
-    const base = this.config.PATHS?.ASSETS || '/assets';
-    const s = p.startsWith('/') ? p.slice(1) : p;
-    return `${base}/${s}`.replace(/\/{2,}/g, '/');
-  }
-  imageUrl(p = '') {
-    const base = this.config.PATHS?.IMAGES || '/assets/img';
-    const s = p.startsWith('/') ? p.slice(1) : p;
-    return `${base}/${s}`.replace(/\/{2,}/g, '/');
-  }
-  iconUrl(p = '') {
-    const base = this.config.PATHS?.ICONS || '/assets/icons';
-    const s = p.startsWith('/') ? p.slice(1) : p;
-    return `${base}/${s}`.replace(/\/{2,}/g, '/');
-  }
-  localeUrl(lang = 'fr') {
-    const base = this.config.PATHS?.LOCALES || '/locales';
-    const safe = (lang || 'fr').toLowerCase();
-    return this.withCacheBust(`${base}/${safe}.json`);
-  }
-  mockUrl(file = '') {
-    const base = this.config.PATHS?.MOCK || '/mock';
-    const s = file.startsWith('/') ? file.slice(1) : file;
-    return `${base}/${s}`.replace(/\/{2,}/g, '/');
-  }
-
-  // Get/Set dinamici
   get(key, def = null) { return this.config[key] ?? def; }
   set(key, value) { this.config[key] = value; }
-
-  // Log rapidi
-  logConfig() {
-    if (!this.get('DEBUG')) return;
-    console.group('🔧 AppConfig');
-    console.log('Env:', this.environment);
-    console.log('API Base:', this.get('API_BASE'));
-    console.log('Paths:', this.get('PATHS'));
-    console.groupEnd();
-  }
 }
 
 const appConfig = new AppConfig();
 
-// Export principali
-export const API_BASE  = appConfig.get('API_BASE');
+export const API_BASE = appConfig.get('API_BASE');
 export const APP_CONFIG = appConfig;
 
 export const CONFIG = {
@@ -191,67 +105,43 @@ export const CONFIG = {
   IS_PROD: appConfig.isProduction(),
 
   apiUrl: (endpoint) => appConfig.apiUrl(endpoint),
-  assetUrl: (path) => appConfig.assetUrl(path),
-  imageUrl: (path) => appConfig.imageUrl(path),
-  iconUrl: (path) => appConfig.iconUrl(path),
-  localeUrl: (lang) => appConfig.localeUrl(lang),
-  mockUrl: (file) => appConfig.mockUrl(file),
-  withCacheBust: (url) => appConfig.withCacheBust(url),
-
   get: (k, d) => appConfig.get(k, d),
   set: (k, v) => appConfig.set(k, v),
 
-  DEFAULT_HEADERS: appConfig.get('DEFAULT_HEADERS'),
   ENDPOINTS: {
     AUTH: {
-      LOGIN:    'api/auth/login',
+      LOGIN: 'api/auth/login',
       REGISTER: 'api/auth/register',
-      LOGOUT:   'api/auth/logout',
-      REFRESH:  'api/auth/refresh',
-      PROFILE:  'api/auth/profile',
-      VERIFY:   'api/auth/verify' // per verifyToken()
+      LOGOUT: 'api/auth/logout',
+      REFRESH: 'api/auth/refresh',
+      PROFILE: 'api/auth/profile',
+      VERIFY: 'api/auth/verify'
     },
     PROJECTS: {
-      LIST:       'api/projects',
-      CREATE:     'api/projects',
-      UPDATE:     'api/projects/:id',
-      DELETE:     'api/projects/:id',
-      ADMIN_ALL:  'api/projects/admin/all' // pannello admin
+      LIST: 'api/projects',
+      CREATE: 'api/projects',
+      UPDATE: 'api/projects/:id',
+      DELETE: 'api/projects/:id',
+      ADMIN_ALL: 'api/projects/admin/all'
     },
     STATS: {
-      OVERVIEW:     'api/stats/overview',
+      OVERVIEW: 'api/stats/overview',
       TECHNOLOGIES: 'api/stats/technologies',
-      TIMELINE:     'api/stats/timeline',
-      HEALTH:       'api/stats/health'
+      HEALTH: 'api/stats/health'
     },
     CONTACT: {
-      SEND:      'api/contact',
-      MESSAGES:  'api/contact/messages'
+      SEND: 'api/contact',
+      MESSAGES: 'api/contact/messages'
     },
     NEWSLETTER: {
-      SUBSCRIBE:   'api/newsletter/subscribe',
-      UNSUBSCRIBE: 'api/newsletter/unsubscribe',
-      SUBSCRIBERS: 'api/newsletter/subscribers'
+      SUBSCRIBE: 'api/newsletter/subscribe',
+      UNSUBSCRIBE: 'api/newsletter/unsubscribe'
     },
     REVIEWS: {
-      LIST:   'api/reviews',
-      CREATE: 'api/reviews',
-      UPDATE: 'api/reviews/:id',
-      DELETE: 'api/reviews/:id'
+      LIST: 'api/reviews',
+      CREATE: 'api/reviews'
     }
   }
 };
-
-// Debug automatico in dev
-document.addEventListener('DOMContentLoaded', () => {
-  appConfig.logConfig();
-  if (appConfig.isDevelopment()) {
-    window.__CONFIG_DEBUG__ = {
-      config: appConfig.config,
-      environment: appConfig.environment,
-      endpoints: CONFIG.ENDPOINTS
-    };
-  }
-});
 
 export default CONFIG;
