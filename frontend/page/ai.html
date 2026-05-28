@@ -1,0 +1,61 @@
+<!-- /page/ai.html -->
+<section class="container py-4">
+  <h1 class="h3 mb-3"><i class="bi bi-cpu me-2"></i>AI Dashboard</h1>
+
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <span id="ai-ping" class="badge text-bg-secondary">AI: checking...</span>
+    <button id="ai-ping-refresh" class="btn btn-sm btn-outline-secondary" type="button">
+      <i class="bi bi-arrow-repeat"></i>
+    </button>
+    <small id="ai-ping-ts" class="text-muted"></small>
+  </div>
+
+  <ul class="nav nav-tabs" id="aiTabs" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-search" type="button">Search</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-chat" type="button">Chat</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-triage" type="button">Triage</button>
+    </li>
+  </ul>
+
+  <div class="tab-content pt-3">
+    <div class="tab-pane fade show active" id="tab-search">
+      <div class="input-group mb-2">
+        <input id="q" class="form-control" placeholder="Cerca tra i progetti (semantico)...">
+        <button id="btn-search" class="btn btn-primary" type="button">
+          <i class="bi bi-search"></i>
+        </button>
+      </div>
+      <div id="search-out" class="mt-2"></div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-chat">
+      <div class="chat-box mb-2" id="chat-box"
+        style="min-height:200px;max-height:400px;overflow-y:auto;border:1px solid var(--bs-border-color);border-radius:8px;padding:1rem;">
+      </div>
+      <div class="input-group">
+        <input id="chat-input" class="form-control" placeholder="Scrivi un messaggio...">
+        <button id="chat-send" class="btn btn-success" type="button">
+          <i class="bi bi-send"></i>
+        </button>
+        <button id="chat-clear" class="btn btn-outline-secondary" type="button">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-triage">
+      <textarea id="triage-text" rows="4" class="form-control"
+        placeholder="Incolla un messaggio di contatto..."></textarea>
+      <div class="mt-2 d-flex gap-2">
+        <button id="triage-run" class="btn btn-primary" type="button">Classifica</button>
+        <pre id="triage-out" class="p-3 bg-light rounded flex-fill"
+          style="min-height:120px;font-family:monospace;font-size:0.85rem;"></pre>
+      </div>
+    </div>
+  </div>
+</section>

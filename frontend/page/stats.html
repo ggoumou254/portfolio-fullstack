@@ -1,0 +1,62 @@
+<!-- /page/stats.html -->
+<section class="container py-5">
+  <h1 class="mb-4">Statistiche del portfolio</h1>
+
+  <div id="stats-error" class="alert alert-danger d-none" role="alert"></div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-md-4">
+      <div class="card text-center shadow h-100">
+        <div class="card-body">
+          <h5 class="card-title">Progetti totali</h5>
+          <p id="total-projects" class="fs-3 fw-bold mb-0">0</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-center shadow h-100">
+        <div class="card-body">
+          <h5 class="card-title">Messaggi ricevuti</h5>
+          <p id="total-contacts" class="fs-3 fw-bold mb-0">0</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-center shadow h-100">
+        <div class="card-body">
+          <h5 class="card-title">Iscritti newsletter</h5>
+          <p id="total-subscribers" class="fs-3 fw-bold mb-0">0</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-5">
+    <div class="col-12">
+      <div class="card shadow">
+        <div class="card-body">
+          <h4 class="card-title mb-4">
+            <i class="bi bi-cpu"></i> Tecnologie piu utilizzate
+          </h4>
+          <div id="tech-list" aria-live="polite">
+            <div class="text-center py-4">
+              <div class="spinner-border text-primary" role="status"></div>
+              <p class="mt-2 text-muted mb-0">Caricamento...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="alert alert-info">
+        <small>
+          <i class="bi bi-info-circle"></i>
+          Le statistiche sono calcolate in tempo reale dai progetti pubblicati.
+        </small>
+      </div>
+    </div>
+  </div>
+</section>

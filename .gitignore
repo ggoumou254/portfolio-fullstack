@@ -1,7 +1,40 @@
+
+# --- Node.js ---
 node_modules/
-.env
-.env.local
-*.log
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# --- Build e cache ---
 dist/
+build/
+.cache/
+.tmp/
+
+# --- Env e segreti ---
+.env
+.env.*
+!.env.example
+
+uploads/
+*.local.json
+
+# --- Log e file temporanei ---
+logs/
+*.log
+*.pid
+*.seed
+*.tmp
+
+# --- Sistema / IDE ---
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- OS vari ---
+ehthumbs.db
+desktop.ini

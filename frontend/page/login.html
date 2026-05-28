@@ -1,0 +1,94 @@
+<!-- /page/login.html -->
+<section class="login-section min-vh-100 py-5">
+  <div class="container">
+    <div class="row justify-content-center align-items-center">
+      <div class="col-md-8 col-lg-6 col-xl-5">
+        <div class="card border-0 shadow-lg">
+          <div class="card-body p-4 p-md-5">
+            <div class="text-center mb-4">
+              <div
+                class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                style="width:64px;height:64px">
+                <i class="bi bi-shield-lock fs-3"></i>
+              </div>
+              <h1 class="h3 fw-bold mb-2">Accesso</h1>
+              <p class="text-muted">Accedi al tuo spazio amministratore</p>
+            </div>
+
+            <div id="login-success" class="alert alert-success alert-dismissible fade show d-none" role="alert">
+              <i class="bi bi-check-circle-fill me-2"></i>
+              <span id="login-success-message"></span>
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div id="login-error" class="alert alert-danger alert-dismissible fade show d-none" role="alert">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              <span id="login-error-message"></span>
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <form id="loginForm" novalidate>
+              <div class="mb-4">
+                <label for="email" class="form-label fw-semibold">
+                  <i class="bi bi-envelope me-2"></i>Email <span class="text-danger">*</span>
+                </label>
+                <input type="email" id="email" class="form-control form-control-lg" required autocomplete="email"
+                  placeholder="tua@email.com" maxlength="100">
+                <div id="email-error" class="invalid-feedback"></div>
+              </div>
+
+              <div class="mb-4">
+                <label for="password" class="form-label fw-semibold">
+                  <i class="bi bi-key me-2"></i>Password <span class="text-danger">*</span>
+                </label>
+                <div class="input-group input-group-lg">
+                  <input type="password" id="password" class="form-control" required autocomplete="current-password"
+                    placeholder="La tua password" minlength="8" maxlength="50">
+                  <button id="toggle-password" type="button" class="btn btn-outline-secondary"
+                    aria-label="Mostra password">
+                    <i class="bi bi-eye"></i>
+                  </button>
+                </div>
+                <div id="password-error" class="invalid-feedback"></div>
+              </div>
+
+              <div class="mb-4">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="rememberMe">
+                  <label class="form-check-label small" for="rememberMe">Ricordami</label>
+                </div>
+              </div>
+
+              <button id="login-submit" type="submit" class="btn btn-primary btn-lg w-100 py-2 fw-semibold">
+                <span class="submit-text">
+                  <i class="bi bi-box-arrow-in-right me-2"></i>Accedi
+                </span>
+                <div class="spinner-border spinner-border-sm d-none ms-2" role="status">
+                  <span class="visually-hidden">Accesso in corso...</span>
+                </div>
+              </button>
+            </form>
+
+            <div class="text-center mt-4 pt-3 border-top">
+              <div class="small">
+                <span class="text-muted">Nuovo sul portfolio?</span>
+                <a href="#register" class="text-decoration-none ms-1" data-page="register">Crea un account</a>
+              </div>
+              <div class="small mt-2">
+                <a href="#home" class="text-decoration-none" data-page="home">
+                  <i class="bi bi-arrow-left me-1"></i>Torna alla home
+                </a>
+              </div>
+            </div>
+
+            <div class="mt-4 p-3 bg-light rounded small">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-shield-check text-success me-2"></i>
+                <span class="text-muted">Connessione sicura con autenticazione JWT</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

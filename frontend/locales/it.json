@@ -1,0 +1,40 @@
+{
+  "page": {
+    "title": "Portfolio | Raphael Goumou",
+    "description": "Portfolio di Raphael Goumou — Full Stack Developer. Progetti, contatti, newsletter e statistiche."
+  },
+  "language": {
+    "label": "Lingua",
+    "changed": "Lingua cambiata",
+    "error": "Errore durante il cambio lingua"
+  },
+  "nav": {
+    "home": "Home",
+    "projects": "Progetti",
+    "contact": "Contatti",
+    "newsletter": "Newsletter",
+    "stats": "Statistiche",
+    "register": "Registrati",
+    "login": "Login",
+    "admin": "Admin"
+  },
+  "footer": {
+    "privacy": "Privacy",
+    "rights": "Tutti i diritti riservati."
+  },
+  "home": {
+    "welcome": "Benvenuto nel mio portfolio"
+  },
+  "projects": {
+    "title": "Progetti"
+  },
+  "contact": {
+    "title": "Contatti"
+  },
+  "newsletter": {
+    "title": "Newsletter"
+  },
+  "stats": {
+    "title": "Statistiche"
+  }
+}
