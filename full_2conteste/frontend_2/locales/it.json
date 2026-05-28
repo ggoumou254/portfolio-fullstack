@@ -1,0 +1,103 @@
+{
+  "page": {
+    "title": "Portfolio | Raphael Goumou",
+    "description": "Portfolio di Raphael Goumou — Full Stack Developer. Progetti, contatti, admin area, newsletter e statistiche."
+  },
+  "nav": {
+    "home": "Home",
+    "projects": "Progetti",
+    "contact": "Contatti",
+    "newsletter": "Newsletter",
+    "stats": "Statistiche",
+    "register": "Registrati",
+    "login": "Login",
+    "admin": "Area Admin",
+    "account": "Account",
+    "langLabel": "Lingua"
+  },
+  "language": { "label": "Lingua" },
+
+  "login": {
+    "title": "Accedi",
+    "subtitle": "Accedi alla tua area personale.",
+    "email": {
+      "label": "Email",
+      "placeholder": "nome@esempio.com",
+      "error": "Inserisci un'email valida"
+    },
+    "password": {
+      "label": "Password",
+      "placeholder": "La tua password",
+      "toggle": "Mostra",
+      "error": "Inserisci la password"
+    },
+    "submit": "Accedi",
+    "toRegister": "Non hai un account? Registrati"
+  },
+
+  "contact": {
+    "title": "Contattami",
+    "subtitle": "Scrivimi per collaborazioni o richieste.",
+    "form": {
+      "name": { "label": "Nome", "placeholder": "Il tuo nome", "error": "Inserisci il nome." },
+      "email": { "label": "Email", "placeholder": "nome@esempio.com", "error": "Inserisci un'email valida." },
+      "message": { "label": "Messaggio", "placeholder": "Scrivi il tuo messaggio...", "error": "Inserisci il messaggio." },
+      "submit": "Invia"
+    }
+  },
+
+  "home": {
+    "hero": {
+      "greeting": "Ciao, sono Raphael Goumou",
+      "lead": "Full Stack Developer specializzato in React, Laravel, DevOps e UI moderne.",
+      "cta": "Contattami",
+      "cv": "Scarica il mio CV"
+    },
+    "skills": {
+      "title": "Le mie competenze",
+      "frontend": "Frontend",
+      "backend": "Backend",
+      "devops": "DevOps",
+      "multilang": "Multilingua",
+      "multilangDesc": "i18n, traduzioni, UX"
+    },
+    "projects": {
+      "title": "Progetti recenti",
+      "viewCode": "Codice su GitHub",
+      "goGithub": "Vai al mio GitHub",
+      "p1": { "title": "E-commerce React/Laravel", "desc": "Marketplace full stack con gestione prodotti, ordini e pagamenti (Stripe)." },
+      "p2": { "title": "Sito culturale Guinea", "desc": "Sito promozionale multilingua per evento culturale guineano." },
+      "p3": { "title": "Portfolio moderno", "desc": "Portfolio personale con gestione progetti, pannello admin e contatti email." }
+    }
+  },
+
+  "reviews": {
+    "title": "Recensioni",
+    "subtitle": "Cosa dicono clienti e collaboratori sul mio lavoro.",
+    "formTitle": "Lascia una recensione",
+    "formPlaceholder": "Condividi la tua esperienza...",
+    "submit": "Invia",
+    "formMinLength": "Minimo 20 caratteri. Le recensioni possono essere moderate.",
+    "ratingLabel": "Valutazione",
+    "commentLabel": "Commento",
+    "nameLabel": "Nome (opzionale)",
+    "namePlaceholder": "Come vuoi apparire",
+    "ratingError": "Seleziona una valutazione",
+    "commentError": "Inserisci un commento di almeno 20 caratteri",
+    "commentHint": "Minimo 20 caratteri, massimo 500 caratteri",
+    "sendBtn": "Invia Recensione",
+    "modNote": "Le recensioni vengono moderate prima della pubblicazione."
+  },
+
+  "footer": {
+    "description": "Full Stack Developer specializzato in sviluppo web moderno, applicazioni responsive e soluzioni DevOps. Trasformo idee in realtà digitali.",
+    "navigation": "Navigazione",
+    "resources": "Risorse",
+    "contacts": "Contatti",
+    "privacy": "Privacy",
+    "cookiePolicy": "Cookie Policy",
+    "downloadCV": "Scarica CV",
+    "copyright": "Tutti i diritti riservati.",
+    "tagline": "Progettato & sviluppato con"
+  }
+}

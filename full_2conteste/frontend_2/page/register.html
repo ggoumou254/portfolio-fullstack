@@ -1,0 +1,34 @@
+
+<!--login.html-->
+<section class="container py-5">
+  <h1 class="mb-3">Registrazione</h1>
+
+  <form id="registerForm" novalidate>
+    <div class="mb-3">
+      <label for="name" class="form-label">Nome</label>
+      <input type="text" id="name" class="form-control" required />
+    </div>
+
+    <div class="mb-3">
+      <label for="email" class="form-label">Email</label>
+      <input type="email" id="email" class="form-control" required autocomplete="email" />
+    </div>
+
+    <div class="mb-3">
+      <label for="password" class="form-label">Password</label>
+      <div class="input-group">
+        <input type="password" id="password" class="form-control" required autocomplete="new-password" />
+        <button id="toggle-password" type="button" class="btn btn-outline-secondary">Mostra</button>
+      </div>
+      <small class="text-muted">Minimo 8 caratteri.</small>
+    </div>
+
+    <button id="register-submit" type="submit" class="btn btn-primary">Registrati</button>
+    <div id="register-error" class="mt-2"></div>
+  </form>
+</section>
+
+<script type="module">
+  import { initRegister } from './js/register.js';
+  initRegister();
+</script>

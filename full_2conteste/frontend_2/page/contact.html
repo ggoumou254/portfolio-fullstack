@@ -1,0 +1,49 @@
+<!-- frontend/page/contact.html -->
+
+<section class="container py-4">
+  <div class="mb-3" id="contact-image">
+    <img src="./assets/img/pexels-bertellifotografia-15380335.jpg"
+         alt="Immagine di contatto"
+         class="img-fluid w-100 rounded">
+  </div>
+
+  <header class="mb-3">
+    <h2 data-i18n="contact.title">Contattami</h2>
+    <p class="text-muted mb-0" data-i18n="contact.subtitle">Scrivimi per collaborazioni o richieste.</p>
+  </header>
+
+  <!-- Messaggi esito -->
+  <div class="alert alert-success d-none" id="contact-success" role="alert" aria-live="polite"></div>
+  <div class="alert alert-danger d-none" id="contact-error" role="alert" aria-live="assertive"></div>
+
+  <form id="contactForm" class="needs-validation" novalidate>
+    <!-- Honeypot per anti-spam -->
+    <input type="text" name="company" id="company" class="d-none" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+    <div class="mb-3">
+      <label for="name" class="form-label" data-i18n="contact.form.name.label">Nome</label>
+      <input type="text" id="name" name="name" class="form-control" required autocomplete="name"
+             placeholder="Il tuo nome" data-i18n-placeholder="contact.form.name.placeholder">
+      <div class="invalid-feedback" data-i18n="contact.form.name.error">Inserisci il nome.</div>
+    </div>
+
+    <div class="mb-3">
+      <label for="email" class="form-label" data-i18n="contact.form.email.label">Email</label>
+      <input type="email" id="email" name="email" class="form-control" required autocomplete="email"
+             placeholder="nome@esempio.com" data-i18n-placeholder="contact.form.email.placeholder">
+      <div class="invalid-feedback" data-i18n="contact.form.email.error">Inserisci un'email valida.</div>
+    </div>
+
+    <div class="mb-3">
+      <label for="message" class="form-label" data-i18n="contact.form.message.label">Messaggio</label>
+      <textarea id="message" name="message" class="form-control" rows="4" required
+                placeholder="Scrivi il tuo messaggio..." data-i18n-placeholder="contact.form.message.placeholder"></textarea>
+      <div class="invalid-feedback" data-i18n="contact.form.message.error">Inserisci il messaggio.</div>
+    </div>
+
+    <button type="submit" id="contact-submit" class="btn btn-primary">
+      <span class="spinner-border spinner-border-sm d-none me-2" role="status"></span>
+      <span data-i18n="contact.form.submit">Invia</span>
+    </button>
+  </form>
+</section>

@@ -1,0 +1,68 @@
+<!--admin.html-->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <button id="open-modal" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#projectModal">
+      + Nuovo Progetto
+    </button>
+    <button id="logout-btn" class="btn btn-outline-danger btn-sm">Logout 🔓</button>
+  </div>
+
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Descrizione</th>
+        <th>Creato</th>
+        <th>Azioni</th>
+      </tr>
+    </thead>
+    <tbody id="admin-projects-body">
+      <tr><td colspan="4">Caricamento…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal progetto -->
+<div class="modal fade" id="projectModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="project-form" enctype="multipart/form-data">
+        <div class="modal-header">
+          <h5 class="modal-title">Nuovo Progetto</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="project-error" class="alert alert-danger d-none"></div>
+
+          <div class="mb-2">
+            <label for="title" class="form-label">Nome</label>
+            <input type="text" class="form-control" id="title" name="title" required />
+          </div>
+          <div class="mb-2">
+            <label for="description" class="form-label">Descrizione</label>
+            <textarea class="form-control" id="description" name="description" required></textarea>
+          </div>
+          <div class="mb-2">
+            <label for="technologies" class="form-label">Tecnologie (comma)</label>
+            <input type="text" class="form-control" id="technologies" name="technologies" />
+          </div>
+          <div class="mb-2">
+            <label for="github" class="form-label">GitHub</label>
+            <input type="url" class="form-control" id="github" name="github" />
+          </div>
+          <div class="mb-2">
+            <label for="liveDemo" class="form-label">Demo</label>
+            <input type="url" class="form-control" id="liveDemo" name="liveDemo" />
+          </div>
+          <div class="mb-2">
+            <label for="image" class="form-label">Immagine Progetto</label>
+            <input type="file" class="form-control" id="image" name="image" accept="image/*" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Salva</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

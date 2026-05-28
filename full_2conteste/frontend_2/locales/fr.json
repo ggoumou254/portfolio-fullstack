@@ -1,0 +1,103 @@
+{
+  "page": {
+    "title": "Portfolio | Raphael Goumou",
+    "description": "Portfolio de Raphael Goumou — Développeur Full Stack. Projets, contact, admin, newsletter et statistiques."
+  },
+  "nav": {
+    "home": "Accueil",
+    "projects": "Projets",
+    "contact": "Contact",
+    "newsletter": "Newsletter",
+    "stats": "Statistiques",
+    "register": "S'inscrire",
+    "login": "Connexion",
+    "admin": "Administration",
+    "account": "Compte",
+    "langLabel": "Langue"
+  },
+  "language": { "label": "Langue" },
+
+  "login": {
+    "title": "Connexion",
+    "subtitle": "Accédez à votre espace personnel.",
+    "email": {
+      "label": "Email",
+      "placeholder": "nom@exemple.com",
+      "error": "Saisissez une adresse email valide"
+    },
+    "password": {
+      "label": "Mot de passe",
+      "placeholder": "Votre mot de passe",
+      "toggle": "Afficher",
+      "error": "Saisissez votre mot de passe"
+    },
+    "submit": "Se connecter",
+    "toRegister": "Pas encore de compte ? S'inscrire"
+  },
+
+  "contact": {
+    "title": "Contactez-moi",
+    "subtitle": "Écrivez-moi pour des collaborations ou des demandes.",
+    "form": {
+      "name": { "label": "Nom", "placeholder": "Votre nom", "error": "Veuillez saisir votre nom." },
+      "email": { "label": "Email", "placeholder": "nom@exemple.com", "error": "Saisissez une adresse email valide." },
+      "message": { "label": "Message", "placeholder": "Écrivez votre message...", "error": "Veuillez saisir un message." },
+      "submit": "Envoyer"
+    }
+  },
+
+  "home": {
+    "hero": {
+      "greeting": "Bonjour, je suis Raphael Goumou",
+      "lead": "Développeur Full Stack spécialisé en React, Laravel, DevOps et interfaces modernes.",
+      "cta": "Me contacter",
+      "cv": "Télécharger mon CV"
+    },
+    "skills": {
+      "title": "Mes compétences",
+      "frontend": "Frontend",
+      "backend": "Backend",
+      "devops": "DevOps",
+      "multilang": "Multilingue",
+      "multilangDesc": "i18n, traductions, UX"
+    },
+    "projects": {
+      "title": "Projets récents",
+      "viewCode": "Code sur GitHub",
+      "goGithub": "Voir mon GitHub",
+      "p1": { "title": "E-commerce React/Laravel", "desc": "Marketplace full stack avec gestion des produits, commandes et paiements (Stripe)." },
+      "p2": { "title": "Site culturel Guinée", "desc": "Site promotionnel multilingue pour un événement culturel guinéen." },
+      "p3": { "title": "Portfolio moderne", "desc": "Portfolio personnel avec gestion de projets, panneau admin et contacts email." }
+    }
+  },
+
+  "reviews": {
+    "title": "Avis",
+    "subtitle": "Ce que disent les clients et collaborateurs sur mon travail.",
+    "formTitle": "Laisser un avis",
+    "formPlaceholder": "Partagez votre expérience...",
+    "submit": "Envoyer",
+    "formMinLength": "Minimum 20 caractères. Les avis peuvent être modérés.",
+    "ratingLabel": "Note",
+    "commentLabel": "Commentaire",
+    "nameLabel": "Nom (facultatif)",
+    "namePlaceholder": "Comment souhaitez-vous apparaître",
+    "ratingError": "Veuillez sélectionner une note",
+    "commentError": "Saisissez un commentaire d'au moins 20 caractères",
+    "commentHint": "Minimum 20 caractères, maximum 500 caractères",
+    "sendBtn": "Envoyer l'avis",
+    "modNote": "Les avis sont modérés avant publication."
+  },
+
+  "footer": {
+    "description": "Développeur Full Stack spécialisé en développement web moderne, applications responsives et solutions DevOps. Je transforme les idées en réalités numériques.",
+    "navigation": "Navigation",
+    "resources": "Ressources",
+    "contacts": "Contact",
+    "privacy": "Confidentialité",
+    "cookiePolicy": "Politique cookies",
+    "downloadCV": "Télécharger CV",
+    "copyright": "Tous droits réservés.",
+    "tagline": "Conçu & développé avec"
+  }
+}

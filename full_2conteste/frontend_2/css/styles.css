@@ -1,0 +1,300 @@
+/* =========================
+   ROOT & RESET (chiaro, leggibile)
+========================= */
+:root{
+  --bg: #f6f8fc;            /* fondo pagina */
+  --surface: #ffffff;        /* carte, blocchi */
+  --surface-2: #f1f5f9;      /* superfici secondarie */
+  --text: #0f172a;           /* testo principale (slate-900) */
+  --muted: #475569;          /* testo attenuato (slate-600) */
+  --border: #e2e8f0;         /* bordi soft */
+
+  --primary: #0d6efd;        /* blu */
+  --primary-600:#0b5ed7;
+  --accent: #8b5cf6;         /* viola accento */
+  --teal: #0d9488;           /* verde acqua per Contatti */
+  --teal-600:#0b7e75;
+  --warning:#f59e0b;
+  --success:#16a34a;
+  --danger:#dc2626;
+
+  --radius: 14px;
+  --shadow: 0 10px 30px rgba(2,6,23,.06);
+  --shadow-soft: 0 6px 20px rgba(2,6,23,.05);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans";
+  line-height:1.6;
+}
+
+/* helper */
+a{color:inherit;text-decoration:none}
+a:hover{opacity:.9}
+.container{max-width:1140px}
+
+/* =========================
+   NAVBAR (default blu)
+   + cambia colore in automatico su Contatti
+========================= */
+.navbar{
+  background: linear-gradient(180deg, rgba(13,110,253,.95), rgba(13,110,253,.90)) !important;
+  box-shadow: var(--shadow);
+  border-bottom:1px solid rgba(2,6,23,.06);
+}
+
+/* Quando il link Contatti è attivo -> navbar teal */
+header:has(a[data-page="contact"].active) .navbar{
+  background: linear-gradient(180deg, rgba(13,148,136,.96), rgba(11,126,117,.92)) !important; /* teal */
+}
+
+/* Link navbar */
+.navbar .nav-link{
+  color: #e7edf8 !important;
+  font-weight:600;
+  letter-spacing:.2px;
+  opacity:.85;
+}
+.navbar .nav-link:hover,
+.navbar .nav-link.active{
+  color: #ffffff !important;
+  opacity:1;
+}
+
+/* Indicatorino sotto il link attivo */
+.navbar .nav-link.active{
+  position:relative;
+}
+.navbar .nav-link.active::after{
+  content:"";
+  position:absolute;left:8px;right:8px;bottom:-6px;height:3px;
+  background: #fff;
+  border-radius: 6px;
+}
+
+/* =========================
+   MAIN CONTENT
+========================= */
+#content{
+  min-height:60vh;
+  padding-top: 1rem;
+  animation: fadeIn .28s ease;
+}
+@keyframes fadeIn{
+  from{opacity:0; transform: translateY(6px)}
+  to{opacity:1; transform: translateY(0)}
+}
+
+/* =========================
+   CARDS / BLOCCHI
+========================= */
+.card{
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text);
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.card .card-title{font-weight:700}
+.card .card-text{color:var(--muted)}
+.card-img-top{border-bottom:1px solid var(--border)}
+
+#project-list .card{height:100%}
+
+/* =========================
+   BUTTONS
+========================= */
+.btn{
+  border-radius: 12px;
+}
+.btn-primary{
+  background: linear-gradient(180deg, var(--primary), var(--primary-600));
+  border:0;
+  color:#fff;
+  box-shadow: 0 10px 18px rgba(13,110,253,.20);
+}
+.btn-primary:hover{filter:brightness(1.05)}
+.btn-outline-dark{
+  color: var(--text); border-color: var(--border); background:#fff;
+}
+.btn-outline-dark:hover{background: var(--surface-2);}
+
+/* =========================
+   FORMS (leggibili)
+========================= */
+.form-control, .form-select{
+  background: #ffffff;
+  border:1px solid var(--border);
+  color: var(--text);
+  border-radius: 12px;
+}
+.form-control::placeholder{color:#94a3b8}
+.form-control:focus{
+  border-color: rgba(13,110,253,.55);
+  box-shadow: 0 0 0 .2rem rgba(13,110,253,.15);
+}
+
+/* =========================
+   SEZIONE RECENSIONI
+========================= */
+#reviews{
+  background: var(--surface-2);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+#reviews .card{
+  background: #fff;
+  border:1px solid var(--border);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+#reviews .card:hover{
+  transform: translateY(-3px);
+  box-shadow: 0 18px 30px rgba(2,6,23,.08);
+}
+
+/* stelle rating */
+#star-rating .star{
+  color:#cbd5e1;
+  font-size:2rem;
+  transition: transform .12s ease, color .12s ease;
+}
+#star-rating .star:hover{transform: scale(1.08); color:#f5c542}
+
+/* =========================*/
+   FOOTER
+
+.footer-link::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  background: var(--primary-500);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.footer-link:hover::before {
+  opacity: 1;
+}
+
+.social-links {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.social-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  color: #94a3b8;
+  text-decoration: none;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.social-link:hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #e2e8f0;
+  transform: translateY(-2px);
+}
+ /*=========================
+   IMMAGINE CONTATTI (coerente)
+========================= */
+#contact-image{
+  text-align:center; margin: 30px auto;
+}
+#contact-image img{
+  max-width:100%; width:100%; max-height: 420px;
+  object-fit: cover; border-radius: 12px;
+  box-shadow: var(--shadow);
+  border:1px solid var(--border);
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+@media (max-width: 768px){
+  .navbar .navbar-brand{font-size:1rem}
+  .card-img-top{max-height:220px; object-fit:cover}
+}
+
+
+/* Helpers: applica tema = cambia var --primary e sfumatura navbar */
+:root{ --primary: #0d6efd; --primary-600:#0b5ed7; }
+.navbar{ background: linear-gradient(180deg, var(--primary), var(--primary-600)) !important; }
+
+/* Base (Home / default) = blu (già settato) */
+:root:has(header a[data-page="home"].active){
+  --primary:#0d6efd; --primary-600:#0b5ed7;
+}
+
+/* Contatti = TEAL */
+:root:has(header a[data-page="contact"].active){
+  --primary:#0d9488; --primary-600:#0b7e75;
+}
+
+/* Progetti = VIOLA */
+:root:has(header a[data-page="projects"].active){
+  --primary:#7c3aed; --primary-600:#6d28d9;
+}
+
+/* Newsletter = ARANCIO */
+:root:has(header a[data-page="newsletter"].active){
+  --primary:#f59e0b; --primary-600:#d97706;
+}
+
+/* Statistiche = INDACO */
+:root:has(header a[data-page="stats"].active){
+  --primary:#6366f1; --primary-600:#4f46e5;
+}
+
+/* Login = CIANO */
+:root:has(header a[data-page="login"].active){
+  --primary:#06b6d4; --primary-600:#0891b2;
+}
+
+/* Registrati = VERDE */
+:root:has(header a[data-page="register"].active){
+  --primary:#22c55e; --primary-600:#16a34a;
+}
+
+/* Admin = ROSSO */
+:root:has(header a[data-page="admin"].active){
+  --primary:#ef4444; --primary-600:#dc2626;
+}
+
+/* Bottoni & focus usano automaticamente le var */
+.btn-primary{
+  background: linear-gradient(180deg, var(--primary), var(--primary-600));
+  border:0; color:#fff;
+  box-shadow: 0 10px 18px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+.form-control:focus{
+  border-color: color-mix(in srgb, var(--primary) 55%, white);
+  box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+/* Link navbar: miglior contrasto sempre */
+.navbar .nav-link{ color:#eef3ff !important; opacity:.9; }
+.navbar .nav-link:hover,
+.navbar .nav-link.active{ color:#ffffff !important; opacity:1; }
+.navbar .nav-link.active::after{
+  background:#fff;
+}
+

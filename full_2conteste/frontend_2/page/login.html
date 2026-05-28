@@ -1,0 +1,38 @@
+<!-- frontend/page/login.html -->
+<section class="container py-5">
+  <header class="mb-4">
+    <h1 class="mb-1" data-i18n="login.title">Login</h1>
+    <p class="text-muted mb-0" data-i18n="login.subtitle">Accedi alla tua area personale.</p>
+  </header>
+
+  <!-- Messaggi esito -->
+  <div id="login-success" class="alert alert-success d-none" role="alert" aria-live="polite"></div>
+  <div id="login-error" class="alert alert-danger d-none" role="alert" aria-live="assertive"></div>
+
+  <form id="loginForm" class="needs-validation" novalidate>
+    <div class="mb-3">
+      <label for="email" class="form-label" data-i18n="login.email.label">Email</label>
+      <input type="email" id="email" class="form-control" required autocomplete="email"
+             placeholder="nome@esempio.com" data-i18n-placeholder="login.email.placeholder">
+      <div class="invalid-feedback" data-i18n="login.email.error">Inserisci un'email valida</div>
+    </div>
+
+    <div class="mb-3">
+      <label for="password" class="form-label" data-i18n="login.password.label">Password</label>
+      <div class="input-group">
+        <input type="password" id="password" class="form-control" required autocomplete="current-password"
+               placeholder="••••••••" data-i18n-placeholder="login.password.placeholder">
+        <button id="toggle-password" type="button" class="btn btn-outline-secondary" aria-controls="password" aria-pressed="false" data-i18n="login.password.toggle">Mostra</button>
+        <div class="invalid-feedback" data-i18n="login.password.error">Inserisci la password</div>
+      </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-3">
+      <button id="login-submit" type="submit" class="btn btn-primary">
+        <span class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
+        <span data-i18n="login.submit">Accedi</span>
+      </button>
+      <a href="#" data-page="register" class="link-secondary" data-i18n="login.toRegister">Non hai un account? Registrati</a>
+    </div>
+  </form>
+</section>
